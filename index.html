@@ -493,7 +493,7 @@ If nothing meaningful, return empty array [].
 Keep each item under 100 words. Be selective — quality over quantity.`;
 
   try{
-    const body={model:"claude-haiku-4-5-20250929",max_tokens:1500,messages:[{role:"user",content:prompt}]};
+    const body={model:"claude-haiku-4-5-20251001",max_tokens:1500,messages:[{role:"user",content:prompt}]};
     const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":cKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify(body)});
     if(!r.ok)throw new Error("Claude "+r.status);
     const data=await r.json();
