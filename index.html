@@ -426,7 +426,7 @@ async function bufferCleanExpired(){
 }
 
 // ─── LIMITLESS API ───
-const LMT_BASE="https://atlas-proxy.psipath.workers.dev";
+const LMT_BASE="https://api.limitless.ai/v1";
 async function lmtFetch(path,params={}){
   const url=new URL(LMT_BASE+path);
   Object.entries(params).forEach(([k,v])=>{if(v!==undefined&&v!==null)url.searchParams.set(k,v)});
@@ -479,18 +479,16 @@ async function runSweep(){
   }
 }
 async function extractIntelligence(text,log){
-  const prompt=`You are ATLAS, extracting intelligence from a lifelog transcript for a user with ADHD.
+  const prompt=`Extract intelligence from this transcript. Respond with ONLY a raw JSON array, no markdown, no backticks, no explanation.
 
 TRANSCRIPT (from ${log.startTime||"unknown time"}):
 ${text.slice(0,3000)}
 
-Extract ONLY meaningful intelligence. Return JSON array of objects:
-[{"type":"commitment|decision|idea|emotion|pattern|action_item|mention|philosophy|insight|question","content":"clear summary","people":["name"],"places":["name"],"relevance":1-10,"original_quote":"brief exact quote if notable"}]
+Return ONLY this format (raw JSON, nothing else):
+[{"type":"commitment","content":"summary","people":["name"],"places":["name"],"relevance":5,"original_quote":"quote"}]
 
-EXTRACT: commitments, decisions, ideas worth capturing, emotional signals, action items, philosophies, insights, open questions.
-IGNORE: small talk, filler, greetings, weather chat, navigation, logistics.
-If nothing meaningful, return empty array [].
-Keep each item under 100 words. Be selective — quality over quantity.`;
+Valid types: commitment, decision, idea, emotion, pattern, action_item, mention, philosophy, insight, question
+IGNORE small talk and filler. If nothing meaningful return []`;
 
   try{
     const body={model:"claude-haiku-4-5-20251001",max_tokens:1500,messages:[{role:"user",content:prompt}]};
@@ -498,8 +496,10 @@ Keep each item under 100 words. Be selective — quality over quantity.`;
     if(!r.ok)throw new Error("Claude "+r.status);
     const data=await r.json();
     const raw=data.content?.[0]?.text||"[]";
-    const cleaned=raw.replace(/```json\n?/g,"").replace(/```\n?/g,"").replace(/\*\*/g,"").replace(/^[^\[]*\[/,"[").replace(/\][^\]]*$/,"]").trim();
-    const items=JSON.parse(cleaned);
+    // Aggressive clean: find the JSON array in whatever Claude returned
+    const arrMatch=raw.match(/\[[\s\S]*\]/);
+    if(!arrMatch){console.log("[ATLAS] No JSON array found in:",raw.slice(0,200));return[]}
+    const items=JSON.parse(arrMatch[0]);
     const expires=new Date(Date.now()+30*24*60*60*1000).toISOString();
     return items.map((item,i)=>({
       id:"buf_"+Date.now()+"_"+i+"_"+NS(),
