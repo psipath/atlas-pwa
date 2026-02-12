@@ -244,7 +244,8 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);height:100dv
   <div class="drawer-title" style="margin-top:4px">COMING SOON</div>
   <div class="drawer-item" style="opacity:0.4"><span class="drawer-item-emoji">☀️</span><div class="drawer-item-text"><div class="drawer-item-name">Morning Flow</div><div class="drawer-item-desc">POE 1 guided</div></div></div>
   <div class="drawer-item" style="opacity:0.4"><span class="drawer-item-emoji">🌙</span><div class="drawer-item-text"><div class="drawer-item-name">Evening Flow</div><div class="drawer-item-desc">POE 3 guided</div></div></div>
-  <div class="drawer-item" style="opacity:0.4"><span class="drawer-item-emoji">📡</span><div class="drawer-item-text"><div class="drawer-item-name">Lifelog Search</div><div class="drawer-item-desc">Extract from transcripts</div></div></div>
+  <div class="drawer-item" onclick="closeDrawer();showBuffer()"><span class="drawer-item-emoji">📡</span><div class="drawer-item-text"><div class="drawer-item-name">Lifelog Sweep</div><div class="drawer-item-desc" id="sweepStatus">Pull + process transcripts</div></div></div>
+  <div class="drawer-item" onclick="closeDrawer();openMineSearch()"><span class="drawer-item-emoji">🔍</span><div class="drawer-item-text"><div class="drawer-item-name">Mine Search</div><div class="drawer-item-desc">Search lifelogs by topic</div></div></div>
 </div>
 <button class="drawer-toggle" id="drawerBtn" onclick="toggleDrawer()">≡</button>
 <div class="main">
@@ -318,7 +319,7 @@ const esc=s=>String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>
 const IS_LOCAL=location.hostname==="localhost"||location.hostname==="127.0.0.1";
 const OBS_DEFAULT=IS_LOCAL?"http://127.0.0.1:27123":"http://192.168.1.127:27180";
 let OBS=localStorage.getItem("obs-url")||OBS_DEFAULT;
-const OBSK="80526ef42c147df114badb16f42bd8a947d63313f0a429128ffa6e67ab774a61";
+let OBSK=localStorage.getItem("obs-key")||"";
 let processing=false,cKey=localStorage.getItem("ck")||"",vault=false,interceptPending=null;
 
 const NEURO_AXES=[{key:"drive",emoji:"🔥",name:"Drive"},{key:"mood",emoji:"😊",name:"Mood"},{key:"energy",emoji:"⚡",name:"Energy"},{key:"calm",emoji:"🧘",name:"Calm"},{key:"clarity",emoji:"🎯",name:"Clarity"},{key:"control",emoji:"🛡️",name:"Control"},{key:"interest",emoji:"🧲",name:"Interest"}];
@@ -335,6 +336,256 @@ let captureLinks=[""];
 let captureSeed=null;
 let linkCounter=1;
 let oaiKey=localStorage.getItem("oai-key")||"";
+let lmtKey=localStorage.getItem("lmt-key")||"";
+let lastSweep=localStorage.getItem("last-sweep")||"";
+let lastSync=localStorage.getItem("last-sync")||"";
+let db=null; // IndexedDB reference
+
+// ─── INDEXEDDB LAYER ───
+const DB_NAME="atlas-v12";
+const DB_VERSION=1;
+const STORES={
+  entities:{keyPath:"id",indices:["type","status","updated_at","name"]},
+  lifelog_buffer:{keyPath:"id",indices:["timestamp","type","relevance","expires"]},
+  inbox:{keyPath:"id",indices:["entityType","created_at"]},
+  sync_log:{keyPath:"id",indices:["action","timestamp"]}
+};
+function initDB(){
+  return new Promise((resolve,reject)=>{
+    const req=indexedDB.open(DB_NAME,DB_VERSION);
+    req.onupgradeneeded=e=>{
+      const d=e.target.result;
+      for(const[name,cfg] of Object.entries(STORES)){
+        if(!d.objectStoreNames.contains(name)){
+          const store=d.createObjectStore(name,{keyPath:cfg.keyPath});
+          cfg.indices.forEach(idx=>store.createIndex(idx,idx,{unique:false}))
+        }
+      }
+    };
+    req.onsuccess=e=>{db=e.target.result;resolve(db)};
+    req.onerror=e=>reject(e.target.error);
+  })
+}
+async function dbPut(store,record){
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(store,"readwrite");
+    tx.objectStore(store).put(record);
+    tx.oncomplete=()=>resolve(true);
+    tx.onerror=e=>reject(e.target.error);
+  })
+}
+async function dbGet(store,key){
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(store,"readonly");
+    const req=tx.objectStore(store).get(key);
+    req.onsuccess=()=>resolve(req.result||null);
+    req.onerror=e=>reject(e.target.error);
+  })
+}
+async function dbGetAll(store,indexName,query){
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(store,"readonly");
+    const s=tx.objectStore(store);
+    const src=indexName?s.index(indexName):s;
+    const req=query?src.getAll(query):src.getAll();
+    req.onsuccess=()=>resolve(req.result||[]);
+    req.onerror=e=>reject(e.target.error);
+  })
+}
+async function dbDelete(store,key){
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(store,"readwrite");
+    tx.objectStore(store).delete(key);
+    tx.oncomplete=()=>resolve(true);
+    tx.onerror=e=>reject(e.target.error);
+  })
+}
+async function dbCount(store){
+  return new Promise((resolve,reject)=>{
+    const tx=db.transaction(store,"readonly");
+    const req=tx.objectStore(store).count();
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=e=>reject(e.target.error);
+  })
+}
+async function requestPersistence(){
+  if(navigator.storage&&navigator.storage.persist){
+    const granted=await navigator.storage.persist();
+    console.log("[ATLAS] Storage persistence:",granted?"✅ GRANTED":"⚠️ denied");
+    return granted
+  }
+  return false
+}
+async function bufferCleanExpired(){
+  const all=await dbGetAll("lifelog_buffer");
+  const now=new Date().toISOString();
+  let cleaned=0;
+  for(const r of all){if(r.expires&&r.expires<now){await dbDelete("lifelog_buffer",r.id);cleaned++}}
+  if(cleaned)console.log("[ATLAS] Buffer cleanup:",cleaned,"expired records removed");
+  return cleaned
+}
+
+// ─── LIMITLESS API ───
+const LMT_BASE="https://api.limitless.ai/v1";
+async function lmtFetch(path,params={}){
+  const url=new URL(LMT_BASE+path);
+  Object.entries(params).forEach(([k,v])=>{if(v!==undefined&&v!==null)url.searchParams.set(k,v)});
+  const r=await fetch(url,{headers:{"X-API-Key":lmtKey}});
+  if(!r.ok)throw new Error("Limitless "+r.status);
+  return await r.json()
+}
+async function lmtTest(){
+  try{const r=await lmtFetch("/lifelogs",{limit:1});return{ok:true,count:r?.data?.lifelogs?.length||0}}
+  catch(e){return{ok:false,error:e.message}}
+}
+async function lmtGetRecent(limit=10,since=null){
+  const params={limit};
+  if(since)params.start=since;
+  const r=await lmtFetch("/lifelogs",params);
+  return r?.data?.lifelogs||[]
+}
+async function lmtSearch(query,limit=20){
+  const r=await lmtFetch("/lifelogs",{limit,query});
+  return r?.data?.lifelogs||[]
+}
+
+// ─── SWEEP ENGINE ───
+async function runSweep(){
+  if(!lmtKey){toast("Set Limitless API key in Settings","error");return[]}
+  if(!cKey){toast("Set Claude API key in Settings","error");return[]}
+  const since=lastSweep||new Date(Date.now()-48*60*60*1000).toISOString();
+  toast("📡 Sweeping lifelogs...","success");
+  try{
+    const logs=await lmtGetRecent(20,since);
+    if(!logs.length){toast("📡 No new lifelogs","success");return[]}
+    toast("📡 Processing "+logs.length+" lifelogs...","success");
+    const extracted=[];
+    for(const log of logs){
+      const text=log.markdown||log.title||"";
+      if(text.length<20)continue; // skip trivial entries
+      const intelligence=await extractIntelligence(text,log);
+      extracted.push(...intelligence);
+    }
+    // Write to buffer
+    for(const item of extracted){await dbPut("lifelog_buffer",item)}
+    // Update last sweep
+    lastSweep=new Date().toISOString();
+    localStorage.setItem("last-sweep",lastSweep);
+    toast("📡 Sweep done: "+extracted.length+" items buffered","success");
+    return extracted
+  }catch(e){
+    toast("📡 Sweep failed: "+e.message,"error");
+    return[]
+  }
+}
+async function extractIntelligence(text,log){
+  const prompt=`You are ATLAS, extracting intelligence from a lifelog transcript for a user with ADHD.
+
+TRANSCRIPT (from ${log.startTime||"unknown time"}):
+${text.slice(0,3000)}
+
+Extract ONLY meaningful intelligence. Return JSON array of objects:
+[{"type":"commitment|decision|idea|emotion|pattern|action_item|mention|philosophy|insight|question","content":"clear summary","people":["name"],"places":["name"],"relevance":1-10,"original_quote":"brief exact quote if notable"}]
+
+EXTRACT: commitments, decisions, ideas worth capturing, emotional signals, action items, philosophies, insights, open questions.
+IGNORE: small talk, filler, greetings, weather chat, navigation, logistics.
+If nothing meaningful, return empty array [].
+Keep each item under 100 words. Be selective — quality over quantity.`;
+
+  try{
+    const body={model:"claude-haiku-4-5-20250929",max_tokens:1500,messages:[{role:"user",content:prompt}]};
+    const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":cKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify(body)});
+    if(!r.ok)throw new Error("Claude "+r.status);
+    const data=await r.json();
+    const raw=data.content?.[0]?.text||"[]";
+    const cleaned=raw.replace(/```json\n?/g,"").replace(/```\n?/g,"").trim();
+    const items=JSON.parse(cleaned);
+    const expires=new Date(Date.now()+30*24*60*60*1000).toISOString();
+    return items.map((item,i)=>({
+      id:"buf_"+Date.now()+"_"+i+"_"+NS(),
+      source_lifelog:log.id||"unknown",
+      timestamp:log.startTime||new Date().toISOString(),
+      type:item.type||"mention",
+      content:item.content||"",
+      people:item.people||[],
+      places:item.places||[],
+      relevance:item.relevance||5,
+      original_quote:item.original_quote||"",
+      expires:expires,
+      created_at:new Date().toISOString()
+    }))
+  }catch(e){console.error("[ATLAS] Extract error:",e);return[]}
+}
+
+// ─── MINE (SEARCH) ───
+async function runMine(query){
+  if(!lmtKey){toast("Set Limitless API key in Settings","error");return[]}
+  if(!query){toast("Enter a search term","error");return[]}
+  toast("🔍 Mining: "+query+"...","success");
+  try{
+    const logs=await lmtSearch(query,20);
+    if(!logs.length){toast("🔍 No matches for '"+query+"'","success");return[]}
+    toast("🔍 Found "+logs.length+" matches, extracting...","success");
+    const extracted=[];
+    for(const log of logs.slice(0,5)){// process top 5 matches
+      const text=log.markdown||log.title||"";
+      if(text.length<20)continue;
+      const intelligence=await extractIntelligence(text,log);
+      extracted.push(...intelligence);
+    }
+    for(const item of extracted){item.id="mine_"+Date.now()+"_"+NS();await dbPut("lifelog_buffer",item)}
+    toast("🔍 Mine done: "+extracted.length+" items found","success");
+    return extracted
+  }catch(e){toast("🔍 Mine failed: "+e.message,"error");return[]}
+}
+
+// ─── BUFFER VIEWER ───
+async function showBuffer(){
+  const o=document.getElementById("nowOverlay");
+  o.style.display="flex";
+  o.innerHTML='<div class="overlay-header"><span class="overlay-title">🧠 INTELLIGENCE BUFFER</span><button class="overlay-close" onclick="hideOverlay(\'now\')">✕</button></div><div class="overlay-body"><div class="now-loading">Loading buffer...</div></div>';
+  try{
+    const count=await dbCount("lifelog_buffer");
+    const all=await dbGetAll("lifelog_buffer");
+    all.sort((a,b)=>(b.relevance||0)-(a.relevance||0));
+    const typeIcons={commitment:"🤝",decision:"⚖️",idea:"💡",emotion:"❤️",pattern:"🔄",action_item:"⚡",mention:"👤",philosophy:"🏛️",insight:"✨",question:"❓"};
+    let html='<div style="padding:12px">';
+    html+='<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">';
+    html+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;flex:1;min-width:80px;text-align:center"><div style="font-size:20px;font-weight:800;color:var(--amber)">'+count+'</div><div style="font-size:10px;color:var(--dim)">records</div></div>';
+    const coverage=lastSweep?Math.round((Date.now()-new Date(lastSweep).getTime())/(1000*60))+"m ago":"never";
+    html+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;flex:1;min-width:80px;text-align:center"><div style="font-size:14px;font-weight:800;color:var(--dim)">'+coverage+'</div><div style="font-size:10px;color:var(--dim)">last sweep</div></div>';
+    html+='</div>';
+    // Sweep + Mine buttons
+    html+='<div style="display:flex;gap:8px;margin-bottom:16px">';
+    html+='<button class="btn btn-s" style="flex:1;background:var(--amber-bg);border-color:var(--amber);color:var(--amber)" onclick="runSweep().then(()=>showBuffer())">📡 SWEEP</button>';
+    html+='<button class="btn btn-s" style="flex:1" onclick="openMineSearch()">🔍 MINE</button>';
+    html+='</div>';
+    // Buffer records
+    if(!all.length){html+='<div class="empty"><div style="font-size:48px;opacity:.4">📡</div><div style="margin-top:16px;font-size:14px">Buffer empty — run a sweep to pull lifelogs</div></div>'}
+    else{
+      const recent=all.slice(0,30);
+      recent.forEach(r=>{
+        const icon=typeIcons[r.type]||"📝";
+        const time=r.timestamp?new Date(r.timestamp).toLocaleDateString([],{month:"short",day:"numeric"})+' '+new Date(r.timestamp).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}):"";
+        const people=r.people?.length?r.people.map(p=>'<span style="color:var(--blue);font-size:10px">@'+esc(p)+'</span>').join(" "):"";
+        html+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:6px">';
+        html+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span style="font-size:16px">'+icon+'</span><span style="font-size:11px;font-family:var(--mono);color:var(--amber);font-weight:700;text-transform:uppercase">'+esc(r.type)+'</span><span style="margin-left:auto;font-size:10px;color:var(--dimmer)">'+time+'</span></div>';
+        html+='<div style="font-size:14px;color:var(--text);line-height:1.4">'+esc(r.content)+'</div>';
+        if(people)html+='<div style="margin-top:4px">'+people+'</div>';
+        if(r.original_quote)html+='<div style="margin-top:4px;font-size:11px;color:var(--dim);font-style:italic;border-left:2px solid var(--border);padding-left:8px">"'+esc(r.original_quote)+'"</div>';
+        html+='<div style="display:flex;align-items:center;gap:8px;margin-top:6px"><span style="font-size:10px;color:var(--dimmer)">relevance: '+r.relevance+'/10</span></div>';
+        html+='</div>'
+      });
+      if(all.length>30)html+='<div style="text-align:center;font-size:11px;color:var(--dimmer);margin-top:8px">+'+(all.length-30)+' more records</div>'
+    }
+    html+='</div>';
+    o.querySelector(".overlay-body").innerHTML=html
+  }catch(e){o.querySelector(".overlay-body").innerHTML='<div class="now-empty">Error: '+esc(e.message)+'</div>'}
+}
+function openMineSearch(){
+  const q=prompt("🔍 Search lifelogs for:");
+  if(q)runMine(q).then(()=>showBuffer())
+}
 
 // Rotating placeholder
 const TIPS=["what's on your mind...","I just...","I need to...","bought...","feeling...","met with...","realized...","craving..."];
@@ -577,10 +828,11 @@ let timerState={active:false,seconds:0,remaining:0,label:"",interval:null,taskFi
 function openTimerModal(){
   if(timerState.active){toast("Timer already running","error");return}
   const m=document.getElementById("timerModal");
-  m.innerHTML='<div class="timer-modal"><div class="timer-card"><div style="font-size:40px;margin-bottom:8px">⏱️</div><div style="font-family:var(--mono);font-size:16px;font-weight:800;color:var(--amber);letter-spacing:2px;margin-bottom:16px">START TIMER</div><div class="timer-durations"><button class="timer-dur" onclick="pickDur(this,180)">3m</button><button class="timer-dur" onclick="pickDur(this,420)">7m</button><button class="timer-dur active" onclick="pickDur(this,1500)">25m</button><button class="timer-dur" onclick="pickDur(this,2700)">45m</button></div><input class="timer-input" id="timerLabel" placeholder="what am I about to do? (optional)"><button class="btn btn-p" onclick="startTimer()">▶ START</button><button class="btn btn-s" style="margin-top:8px;width:100%" onclick="closeTimerModal()">Cancel</button></div></div>';
+  m.innerHTML='<div class="timer-modal"><div class="timer-card"><div style="font-size:40px;margin-bottom:8px">⏱️</div><div style="font-family:var(--mono);font-size:16px;font-weight:800;color:var(--amber);letter-spacing:2px;margin-bottom:16px">START TIMER</div><div class="timer-durations"><button class="timer-dur" onclick="pickDur(this,300)">5m</button><button class="timer-dur" onclick="pickDur(this,900)">15m</button><button class="timer-dur active" onclick="pickDur(this,1500)">25m</button><button class="timer-dur" onclick="pickDur(this,2700)">45m</button></div><div style="display:flex;align-items:center;gap:8px;justify-content:center;margin:8px 0"><input type="number" id="timerCustomMin" placeholder="min" min="1" max="180" style="width:60px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:8px;color:var(--text);font-family:var(--mono);font-size:14px;text-align:center;outline:none" oninput="pickCustomDur()"><span style="font-size:11px;color:var(--dimmer)">custom minutes</span></div><input class="timer-input" id="timerLabel" placeholder="what am I about to do? (optional)"><button class="btn btn-p" onclick="startTimer()">▶ START</button><button class="btn btn-s" style="margin-top:8px;width:100%" onclick="closeTimerModal()">Cancel</button></div></div>';
   m.style.display="block";timerState.seconds=1500;
 }
-function pickDur(el,secs){document.querySelectorAll(".timer-dur").forEach(b=>b.classList.remove("active"));el.classList.add("active");timerState.seconds=secs}
+function pickDur(el,secs){document.querySelectorAll(".timer-dur").forEach(b=>b.classList.remove("active"));el.classList.add("active");timerState.seconds=secs;const ci=document.getElementById("timerCustomMin");if(ci)ci.value=""}
+function pickCustomDur(){const ci=document.getElementById("timerCustomMin");if(!ci||!ci.value)return;const mins=parseInt(ci.value);if(mins>0&&mins<=180){timerState.seconds=mins*60;document.querySelectorAll(".timer-dur").forEach(b=>b.classList.remove("active"))}}
 function closeTimerModal(){document.getElementById("timerModal").innerHTML="";document.getElementById("timerModal").style.display="none"}
 
 function startTimer(){
@@ -616,22 +868,39 @@ function stopTimer(){
   toast("⏱️ Timer stopped","success");
 }
 
+function playTimerAlert(){
+  try{const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    [0,200,400].forEach(delay=>{const o=ctx.createOscillator();const g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.frequency.value=528;g.gain.value=0.3;o.start(ctx.currentTime+delay/1000);o.stop(ctx.currentTime+delay/1000+0.15)});
+    if(navigator.vibrate)navigator.vibrate([200,100,200,100,200]);
+  }catch(e){}
+}
+
 function timerComplete(){
   timerState.active=false;
   document.getElementById("timerFloat").style.display="none";
   document.getElementById("timerBtn").classList.remove("has-val");
+  playTimerAlert();
   if("Notification" in window&&Notification.permission==="granted")new Notification("⏱️ Timer done!",{body:timerState.label||"Time's up"});
-  const outcome=prompt("⏱️ Timer done!\n\n"+(timerState.label||"What did you do?")+"\n\nHow'd it go?");
-  if(outcome&&vault&&timerState.taskFile){
+  const durMin=Math.round(timerState.seconds/60);
+  const pop=document.getElementById("neuroPop");
+  pop.innerHTML='<div class="pop-backdrop" onclick="closeTimerFollowup()"></div><div class="neuro-pop" style="border-color:var(--amber)"><div class="neuro-pop-header"><span class="neuro-pop-title">⏱️ TIMER COMPLETE</span><button class="neuro-pop-close" onclick="closeTimerFollowup()">Done</button></div><div style="text-align:center;margin-bottom:12px"><div style="font-size:28px;margin-bottom:4px">✅</div><div style="font-size:16px;font-weight:700;color:var(--text)">'+(timerState.label||"Focus session")+'</div><div style="font-size:12px;color:var(--dim);font-family:var(--mono);margin-top:4px">'+durMin+' min completed</div></div><div style="font-size:11px;color:var(--amber);font-family:var(--mono);letter-spacing:1px;margin-bottom:6px;font-weight:700">HOW DID IT GO?</div><textarea id="timerOutcome" class="tit-review-val" style="min-height:60px;resize:vertical;margin-bottom:12px" placeholder="quick note (optional)..."></textarea><div style="display:flex;gap:8px"><button onclick="saveTimerOutcome(\'complete\')" style="flex:1;padding:14px;border-radius:12px;border:none;background:var(--green);color:#fff;font-family:var(--mono);font-size:14px;font-weight:800;cursor:pointer">✅ Done</button><button onclick="saveTimerOutcome(\'partial\')" style="flex:1;padding:14px;border-radius:12px;border:1px solid var(--amber);background:var(--amber-bg);color:var(--amber);font-family:var(--mono);font-size:12px;font-weight:700;cursor:pointer">⚡ Partial</button><button onclick="closeTimerFollowup()" style="flex:1;padding:14px;border-radius:12px;border:1px solid var(--border);background:var(--bg3);color:var(--dim);font-family:var(--mono);font-size:12px;font-weight:700;cursor:pointer">Skip</button></div></div>';
+}
+
+function saveTimerOutcome(status){
+  const outcome=document.getElementById("timerOutcome")?.value?.trim()||"";
+  if(vault&&timerState.taskFile){
     obsR("Capture/inbox/"+timerState.taskFile).then(c=>{
       if(!c)return;
-      let updated=updateYamlField(c,"status","complete");
-      updated+="\n\n## Outcome\n"+outcome+"\n\n**Duration:** "+Math.round(timerState.seconds/60)+" min\n**Completed:** "+NOW()+"\n";
-      obsW("Capture/inbox/"+timerState.taskFile,updated).then(()=>toast("✅ Timer task complete","success"));
+      let updated=updateYamlField(c,"status",status);
+      updated+="\n\n## Outcome\n"+(outcome||"Completed")+"\n\n**Duration:** "+Math.round(timerState.seconds/60)+" min\n**Completed:** "+NOW()+"\n";
+      obsW("Capture/inbox/"+timerState.taskFile,updated).then(()=>toast("✅ Timer task "+status,"success"));
     }).catch(()=>{});
   }
-  toast("⏱️ Done! "+(timerState.label||""),"success");
+  closeTimerFollowup();
+  toast("⏱️ "+(status==="complete"?"Done":"Partial")+": "+(timerState.label||"session"),"success");
 }
+
+function closeTimerFollowup(){document.getElementById("neuroPop").innerHTML=""}
 
 // ─── GEOLOCATION ───
 function captureLocation(){
@@ -945,7 +1214,7 @@ function renderInboxDetail(idx){
   let neuroExpand="";NEURO_AXES.forEach(a=>{neuroExpand+='<div class="neuro-row"><button class="neuro-tap minus" onclick="adjReviewNeuro(\''+a.key+'\',-1)">−</button><div class="neuro-mid"><span class="neuro-mid-emoji">'+a.emoji+'</span><span class="neuro-mid-val neutral" id="rnv_'+a.key+'">5</span></div><button class="neuro-tap plus" onclick="adjReviewNeuro(\''+a.key+'\',1)">+</button></div>'});
   const proposal=getAIProposal(item);
   const proposalHtml=proposal?'<div class="ai-proposal" id="aiProposalCard"><div class="ai-proposal-header"><span class="ai-proposal-title">🤖 ATLAS PROPOSAL</span><button class="ai-proposal-edit" onclick="toggleProposalEdit('+idx+')">✏️ edit</button></div><div class="ai-proposal-body" id="aiProposalBody">'+proposal.split("\n").map(l=>l.trim()).filter(l=>l).map(l=>'<div class="step"><span class="step-arrow">→</span><span>'+esc(l.replace(/^→\s*/,""))+'</span></div>').join("")+'</div></div>':"";
-  o.innerHTML='<div class="overlay-header"><div style="display:flex;align-items:center;gap:8px"><button class="overlay-close" onclick="renderInboxCard()">←</button><span class="overlay-title">'+(e?.e||"📄")+" "+esc(e?.l||item.entityType)+'</span></div><button class="overlay-close" onclick="hideOverlay(\'inbox\')">✕</button></div><div class="overlay-body" style="padding:12px">'+(confPct?'<div style="font-size:11px;color:var(--dimmer);font-family:var(--mono);margin-bottom:10px">AI confidence: <span style="color:'+confColor+';font-weight:800">'+confPct+'%</span> '+(item.reasoning?esc(item.reasoning):"")+'</div>':"")+'<div style="font-size:11px;color:var(--amber);font-family:var(--mono);letter-spacing:1px;margin-bottom:8px;font-weight:700">WORKFLOW SEED</div>'+seedHtml+'<div class="section-divider"></div><div style="font-size:11px;color:var(--amber);font-family:var(--mono);letter-spacing:1px;margin-bottom:8px;font-weight:700">TIT BREAKDOWN</div><div id="titReviewFields">'+titHtml+'</div><div class="section-divider"></div><div class="neuro-bar" id="reviewNeuroBar" onclick="toggleReviewNeuroBar()"><div class="neuro-bar-header"><span class="neuro-bar-title">🧠 NEUROMARKER</span><span class="neuro-bar-toggle">▼</span></div><div class="neuro-bar-preview" id="neuroBarPreview">'+neuroPreview+'</div><div class="neuro-bar-expand" id="neuroBarExpand">'+neuroExpand+'<button class="neuro-reset-btn" onclick="event.stopPropagation();resetReviewNeuro()">reset all to 5</button></div></div>'+proposalHtml+'<div style="font-size:11px;color:var(--dimmer);font-family:var(--mono);margin:8px 0;padding:8px 12px;background:var(--bg2);border-radius:8px">→ '+item.dest+'/'+item.filename+'</div><div style="display:flex;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)"><button onclick="detailAction('+idx+',\'approve\')" style="flex:2;padding:18px;border-radius:14px;border:none;background:var(--green);color:#fff;font-family:var(--mono);font-size:16px;font-weight:800;cursor:pointer;min-height:56px">✅ Confirm</button><button onclick="detailAction('+idx+',\'delete\')" style="flex:1;padding:18px;border-radius:14px;border:1px solid var(--border);background:var(--bg3);color:var(--red);font-family:var(--mono);font-size:14px;font-weight:700;cursor:pointer;min-height:56px">🗑️</button></div></div>';
+  o.innerHTML='<div class="overlay-header"><div style="display:flex;align-items:center;gap:8px"><button class="overlay-close" onclick="renderInboxCard()">←</button><span class="overlay-title">'+(e?.e||"📄")+" "+esc(e?.l||item.entityType)+'</span></div><button class="overlay-close" onclick="hideOverlay(\'inbox\')">✕</button></div><div class="overlay-body" style="padding:12px">'+(confPct?'<div style="font-size:11px;color:var(--dimmer);font-family:var(--mono);margin-bottom:10px">AI confidence: <span style="color:'+confColor+';font-weight:800">'+confPct+'%</span> '+(item.reasoning?esc(item.reasoning):"")+'</div>':"")+'<div style="font-size:11px;color:var(--amber);font-family:var(--mono);letter-spacing:1px;margin-bottom:8px;font-weight:700">WORKFLOW SEED</div>'+seedHtml+'<div class="section-divider"></div>'+proposalHtml+'<div style="font-size:11px;color:var(--amber);font-family:var(--mono);letter-spacing:1px;margin-bottom:8px;font-weight:700">TIT BREAKDOWN</div><div id="titReviewFields">'+titHtml+'</div><div class="section-divider"></div><div class="neuro-bar" id="reviewNeuroBar" onclick="toggleReviewNeuroBar()"><div class="neuro-bar-header"><span class="neuro-bar-title">🧠 NEUROMARKER</span><span class="neuro-bar-toggle">▼</span></div><div class="neuro-bar-preview" id="neuroBarPreview">'+neuroPreview+'</div><div class="neuro-bar-expand" id="neuroBarExpand">'+neuroExpand+'<button class="neuro-reset-btn" onclick="event.stopPropagation();resetReviewNeuro()">reset all to 5</button></div></div><div style="font-size:11px;color:var(--dimmer);font-family:var(--mono);margin:8px 0;padding:8px 12px;background:var(--bg2);border-radius:8px">→ '+item.dest+'/'+item.filename+'</div><div style="display:flex;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)"><button onclick="detailAction('+idx+',\'approve\')" style="flex:2;padding:18px;border-radius:14px;border:none;background:var(--green);color:#fff;font-family:var(--mono);font-size:16px;font-weight:800;cursor:pointer;min-height:56px">✅ Confirm</button><button onclick="detailAction('+idx+',\'delete\')" style="flex:1;padding:18px;border-radius:14px;border:1px solid var(--border);background:var(--bg3);color:var(--red);font-family:var(--mono);font-size:14px;font-weight:700;cursor:pointer;min-height:56px">🗑️</button></div></div>';
 }
 
 function toggleReviewNeuroBar(){const bar=document.getElementById("reviewNeuroBar");bar.classList.toggle("open")}
@@ -1058,10 +1327,47 @@ async function loadNow(){
 function showSettings(){
   const o=document.getElementById("settingsOverlay");
   const corrections=getCorrections();
-  o.innerHTML='<div class="overlay-header"><span class="overlay-title">⚙ SETTINGS</span><button class="overlay-close" onclick="hideOverlay(\'settings\')">✕</button></div><div class="overlay-body"><div class="sgroup"><div class="slabel">CONNECTION</div><div class="sfield"><label>Obsidian REST URL</label><input id="sObs" value="'+esc(OBS)+'" /></div><div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-s" style="flex:1" onclick="saveObs()">Save URL</button><button class="btn btn-s" style="flex:1" onclick="testV().then(()=>toast(vault?\'✅ Connected\':\'❌ Failed\',vault?\'success\':\'error\'))">Test</button></div></div><div class="sgroup"><div class="slabel">AI</div><div class="sfield"><label>Claude API Key</label><input id="sCk" type="password" value="'+esc(cKey)+'" /></div><button class="btn btn-s" style="width:100%;margin-top:8px" onclick="saveCk()">Save Key</button></div><div class="sgroup"><div class="slabel">AI — OPENAI (Whisper)</div><div class="sfield"><label>OpenAI API Key</label><input id="sOai" type="password" value="'+esc(oaiKey)+'" /></div><div style="font-size:10px;color:var(--dimmer);margin:4px 0">For long audio transcription. ~$0.006/min</div><button class="btn btn-s" style="width:100%;margin-top:8px" onclick="saveOai()">Save Key</button></div><div class="sgroup"><div class="slabel">NOTIFICATIONS</div><button class="btn btn-s" style="width:100%" onclick="reqNotif()">Enable Notifications</button></div><div class="sgroup"><div class="slabel">AI LEARNING ('+corrections.length+' corrections)</div><div style="font-size:11px;color:var(--dim);margin-bottom:8px">ATLAS learns from your inbox edits to improve future routing.</div>'+(corrections.length?'<div style="max-height:120px;overflow-y:auto;background:var(--bg2);border-radius:8px;padding:8px;margin-bottom:8px">'+corrections.slice(0,10).map(c=>'<div style="font-size:10px;color:var(--dimmer);margin-bottom:4px">'+esc(c.field)+': "'+esc(c.from)+'" → "'+esc(c.to)+'"</div>').join("")+'</div>':"")+'<button class="btn btn-s" style="width:100%" onclick="if(confirm(\'Clear all corrections?\')){localStorage.removeItem(\'atlas-corrections\');showSettings()}">Clear Learning Data</button></div><div class="sgroup"><div class="slabel">SYSTEM</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">ATLAS V12 Light · v10.0</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">Build: '+TD+'</div><div style="font-size:11px;color:var(--dimmer)">Vault: '+(vault?"✅ Connected":"❌ Offline")+'</div></div></div>';
+  const lmtInfo=lmtKey?(lastSweep?"Last sweep: "+new Date(lastSweep).toLocaleString():"Key set — never swept"):"No key set";
+  const syncAge=lastSync?Math.round((Date.now()-new Date(lastSync).getTime())/(1000*60*60)):-1;
+  const syncColor=syncAge<0?"var(--dimmer)":syncAge<72?"var(--green)":syncAge<120?"var(--amber)":"var(--red)";
+  const syncText=syncAge<0?"never":syncAge<1?"just now":syncAge<24?syncAge+"h ago":Math.round(syncAge/24)+"d ago";
+  o.innerHTML='<div class="overlay-header"><span class="overlay-title">⚙ SETTINGS</span><button class="overlay-close" onclick="hideOverlay(\'settings\')">✕</button></div><div class="overlay-body">'
+  +'<div class="sgroup"><div class="slabel">CONNECTION</div><div class="sfield"><label>Obsidian REST URL</label><input id="sObs" value="'+esc(OBS)+'" /></div><div class="sfield" style="margin-top:6px"><label>Obsidian API Key</label><input id="sObsk" type="password" value="'+esc(OBSK)+'" /></div><div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-s" style="flex:1" onclick="saveObs()">Save</button><button class="btn btn-s" style="flex:1" onclick="testV().then(()=>toast(vault?\'✅ Connected\':\'❌ Failed\',vault?\'success\':\'error\'))">Test</button></div></div>'
+  +'<div class="sgroup"><div class="slabel">📡 LIMITLESS AI</div><div class="sfield"><label>Limitless API Key</label><input id="sLmt" type="password" value="'+esc(lmtKey)+'" /></div><div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-s" style="flex:1" onclick="saveLmt()">Save Key</button><button class="btn btn-s" style="flex:1" onclick="testLmt()">Test</button></div><div id="lmtStatus" style="font-size:10px;color:var(--dimmer);margin-top:4px">'+lmtInfo+'</div></div>'
+  +'<div class="sgroup"><div class="slabel">AI — CLAUDE</div><div class="sfield"><label>Claude API Key</label><input id="sCk" type="password" value="'+esc(cKey)+'" /></div><button class="btn btn-s" style="width:100%;margin-top:8px" onclick="saveCk()">Save Key</button></div>'
+  +'<div class="sgroup"><div class="slabel">AI — OPENAI (Whisper)</div><div class="sfield"><label>OpenAI API Key</label><input id="sOai" type="password" value="'+esc(oaiKey)+'" /></div><div style="font-size:10px;color:var(--dimmer);margin:4px 0">For long audio transcription. ~$0.006/min</div><button class="btn btn-s" style="width:100%;margin-top:8px" onclick="saveOai()">Save Key</button></div>'
+  +'<div class="sgroup"><div class="slabel">SYNC &amp; DATA</div><div style="font-size:11px;margin-bottom:4px">Vault sync: <span style="color:'+syncColor+';font-weight:700">'+syncText+'</span></div><div style="font-size:11px;color:var(--dim);margin-bottom:8px" id="bufStatsLine">Buffer: loading...</div><div style="display:flex;gap:8px"><button class="btn btn-s" style="flex:1;background:var(--amber-bg);border-color:var(--amber);color:var(--amber)" onclick="exportBuffer()">📦 Export</button><button class="btn btn-s" style="flex:1" onclick="bufferCleanExpired().then(n=>toast(n+\' expired removed\',\'success\'))">🧹 Clean</button></div></div>'
+  +'<div class="sgroup"><div class="slabel">NOTIFICATIONS</div><button class="btn btn-s" style="width:100%" onclick="reqNotif()">Enable Notifications</button></div>'
+  +'<div class="sgroup"><div class="slabel">AI LEARNING ('+corrections.length+' corrections)</div><div style="font-size:11px;color:var(--dim);margin-bottom:8px">ATLAS learns from your inbox edits to improve future routing.</div>'+(corrections.length?'<div style="max-height:120px;overflow-y:auto;background:var(--bg2);border-radius:8px;padding:8px;margin-bottom:8px">'+corrections.slice(0,10).map(c=>'<div style="font-size:10px;color:var(--dimmer);margin-bottom:4px">'+esc(c.field)+': "'+esc(c.from)+'" → "'+esc(c.to)+'"</div>').join("")+'</div>':"")+'<button class="btn btn-s" style="width:100%" onclick="if(confirm(\'Clear all corrections?\')){localStorage.removeItem(\'atlas-corrections\');showSettings()}">Clear Learning Data</button></div>'
+  +'<div class="sgroup"><div class="slabel">SYSTEM</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">ATLAS V12 Light · v11.0</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">Build: '+TD+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">Vault: '+(vault?"✅ Connected":"❌ Offline")+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">IndexedDB: '+(db?"✅ Ready":"❌ Not init")+'</div><div style="font-size:11px;color:var(--dimmer)">Limitless: '+(lmtKey?"✅ Key set":"❌ No key")+'</div></div></div>';
   o.style.display="flex";
+  showBufferStats();
 }
-function saveObs(){OBS=document.getElementById("sObs").value.trim().replace(/\/$/,"");localStorage.setItem("obs-url",OBS);testV();toast("URL saved","success")}
+function saveLmt(){lmtKey=document.getElementById("sLmt").value.trim();localStorage.setItem("lmt-key",lmtKey);toast("Limitless key saved","success")}
+async function testLmt(){
+  if(!lmtKey){toast("Enter a Limitless API key first","error");return}
+  toast("Testing Limitless...","success");
+  const r=await lmtTest();
+  const el=document.getElementById("lmtStatus");
+  if(r.ok){toast("✅ Limitless connected","success");if(el)el.textContent="✅ Connected — API reachable"}
+  else{toast("❌ Limitless failed: "+r.error,"error");if(el)el.textContent="❌ "+r.error}
+}
+async function showBufferStats(){
+  const el=document.getElementById("bufStatsLine");if(!el||!db)return;
+  try{const c=await dbCount("lifelog_buffer");el.textContent="Buffer: "+c+" records"+(lastSweep?" · swept "+new Date(lastSweep).toLocaleDateString():"")}
+  catch(e){el.textContent="Buffer: error reading"}
+}
+async function exportBuffer(){
+  if(!db){toast("IndexedDB not ready","error");return}
+  try{
+    const all=await dbGetAll("lifelog_buffer");
+    const blob=new Blob([JSON.stringify(all,null,2)],{type:"application/json"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");a.href=url;a.download="atlas-buffer-"+TD+".json";a.click();
+    URL.revokeObjectURL(url);toast("📦 Buffer exported ("+all.length+" records)","success")
+  }catch(e){toast("Export failed: "+e.message,"error")}
+}
+function saveObs(){OBS=document.getElementById("sObs").value.trim().replace(/\/$/,"");OBSK=document.getElementById("sObsk").value.trim();localStorage.setItem("obs-url",OBS);localStorage.setItem("obs-key",OBSK);testV();toast("Connection saved","success")}
 function saveCk(){cKey=document.getElementById("sCk").value.trim();localStorage.setItem("ck",cKey);toast("Key saved","success")}
 function saveOai(){oaiKey=document.getElementById("sOai").value.trim();localStorage.setItem("oai-key",oaiKey);toast("Whisper key saved","success")}
 function reqNotif(){if("Notification" in window)Notification.requestPermission().then(p=>toast(p==="granted"?"✅ Enabled":"❌ Denied",p==="granted"?"success":"error"));else toast("Not supported","error")}
@@ -1193,6 +1499,8 @@ async function drawerAction(type){
 
 // ─── INIT ───
 async function boot(){
+  try{await initDB();console.log("[ATLAS] IndexedDB ready")}catch(e){console.error("[ATLAS] IndexedDB failed:",e)}
+  await requestPersistence();
   await testV();
   loadSatState();
   await renderSatBanner();
@@ -1200,6 +1508,7 @@ async function boot(){
   updDrawerCounts();
   captureLocation();
   setupMicButton();
+  if(db)bufferCleanExpired();
   if("Notification" in window&&Notification.permission==="default")setTimeout(()=>Notification.requestPermission(),5000);
 }
 boot();
