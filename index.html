@@ -498,7 +498,7 @@ Keep each item under 100 words. Be selective — quality over quantity.`;
     if(!r.ok)throw new Error("Claude "+r.status);
     const data=await r.json();
     const raw=data.content?.[0]?.text||"[]";
-    const cleaned=raw.replace(/```json\n?/g,"").replace(/```\n?/g,"").trim();
+    const cleaned=raw.replace(/```json\n?/g,"").replace(/```\n?/g,"").replace(/\*\*/g,"").replace(/^[^\[]*\[/,"[").replace(/\][^\]]*$/,"]").trim();
     const items=JSON.parse(cleaned);
     const expires=new Date(Date.now()+30*24*60*60*1000).toISOString();
     return items.map((item,i)=>({
