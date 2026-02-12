@@ -1,0 +1,1208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ATLAS">
+<meta name="theme-color" content="#0a0a0f">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>ATLAS — V12 Light</title>
+<style>
+:root{--bg:#08080c;--bg2:#111118;--bg3:#1a1a24;--border:#2a2a3a;--text:#f0f0f5;--dim:#8888a0;--dimmer:#4a4a5a;--amber:#f5b040;--amber2:#e09820;--amber-bg:rgba(245,176,64,0.12);--green:#45d080;--green-bg:rgba(69,208,128,0.12);--red:#e84858;--red-bg:rgba(232,72,88,0.12);--blue:#5090e8;--blue-bg:rgba(80,144,232,0.12);--mono:'SF Mono','Fira Code','JetBrains Mono',monospace;--sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:var(--sans);background:var(--bg);color:var(--text);height:100dvh;display:flex;flex-direction:column;overflow:hidden;-webkit-user-select:none;user-select:none}
+.header{padding:max(env(safe-area-inset-top),8px) 16px 8px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.header-left{display:flex;align-items:center;gap:8px}
+.logo{font-family:var(--mono);color:var(--amber);font-weight:800;font-size:15px;letter-spacing:3px}
+.header-right{display:flex;align-items:center;gap:8px}
+.dot{display:inline-block;width:7px;height:7px;border-radius:50%}.dot.on{background:var(--green)}.dot.off{background:var(--red)}
+.hbtn{background:none;border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--dim);font-size:18px;font-family:var(--sans);cursor:pointer;min-width:48px;min-height:48px;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent}
+.hbtn .badge-count{background:var(--amber);color:var(--bg);font-size:10px;font-weight:800;padding:1px 5px;border-radius:8px;margin-left:4px;font-family:var(--mono)}
+.toast{position:fixed;top:60px;left:50%;transform:translateX(-50%);padding:10px 20px;border-radius:8px;font-size:12px;font-weight:600;z-index:999;display:none;animation:fi .2s;max-width:90%}
+.toast.success{background:var(--green-bg);color:var(--green);border:1px solid rgba(69,208,128,0.3)}
+.toast.error{background:var(--red-bg);color:var(--red);border:1px solid rgba(232,72,88,0.3)}
+@keyframes fi{from{opacity:0;transform:translateX(-50%) translateY(-8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+.main{flex:1;overflow-y:auto;padding:8px 12px;-webkit-overflow-scrolling:touch;display:flex;flex-direction:column;gap:8px;padding-bottom:80px}
+.drawer-toggle{position:fixed;right:12px;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:12px;border:1px solid var(--border);background:var(--bg2);color:var(--amber);font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:40;-webkit-tap-highlight-color:transparent;box-shadow:0 2px 12px rgba(0,0,0,0.3);transition:all .15s}
+.drawer-toggle:active{transform:translateY(-50%) scale(0.9)}
+.drawer-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:59;display:none}.drawer-backdrop.open{display:block}
+.drawer{position:fixed;right:-280px;top:0;bottom:0;width:260px;background:var(--bg2);border-left:1px solid var(--border);z-index:60;transition:right .25s ease-out;padding:max(env(safe-area-inset-top),16px) 12px 32px;overflow-y:auto;display:flex;flex-direction:column;gap:4px}
+.drawer.open{right:0}
+.drawer-title{font-family:var(--mono);font-size:11px;color:var(--amber);letter-spacing:2px;font-weight:700;margin-bottom:4px;padding:4px 8px}
+.drawer-item{display:flex;align-items:center;gap:10px;padding:12px;border-radius:10px;border:1px solid transparent;cursor:pointer;transition:all .12s;-webkit-tap-highlight-color:transparent}
+.drawer-item:active{background:var(--bg3);border-color:var(--border);transform:scale(0.97)}
+.drawer-item-emoji{font-size:20px;width:28px;text-align:center;flex-shrink:0}
+.drawer-item-text{flex:1;min-width:0}
+.drawer-item-name{font-size:13px;font-weight:600;color:var(--text)}
+.drawer-item-desc{font-size:10px;color:var(--dimmer);margin-top:1px}
+.drawer-sep{height:1px;background:var(--border);margin:4px 8px}
+.is-toggle{display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:10px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.is-toggle-label{font-size:10px;color:var(--dimmer);font-family:var(--mono);letter-spacing:0.5px}
+.is-toggle-preview{font-size:12px;color:var(--dim);flex:1}
+.is-toggle-arrow{font-size:10px;color:var(--dimmer);transition:transform .2s}
+.is-toggle.open .is-toggle-arrow{transform:rotate(180deg)}
+.is-toggle.open{border-radius:10px 10px 0 0}
+.is-panel{display:none;background:var(--bg2);border:1px solid var(--border);border-top:none;border-radius:0 0 10px 10px;padding:10px 12px}
+.is-panel.open{display:block}
+.is-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.is-chip{font-size:15px;padding:10px 16px;border-radius:10px;border:1px solid var(--border);background:var(--bg3);color:var(--dim);cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:transparent}
+.is-chip.active{border-color:var(--amber);color:var(--amber);background:var(--amber-bg)}
+.is-intensity{display:flex;align-items:center;gap:6px}
+.is-intensity-val{font-family:var(--mono);font-size:15px;font-weight:800;color:var(--amber);min-width:18px;text-align:center}
+.is-int-btn{width:44px;height:44px;border-radius:10px;border:1px solid var(--border);background:var(--bg3);color:var(--dim);font-size:18px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.is-tf{display:flex;gap:4px;margin-left:auto}
+.is-tf-chip{font-size:9px;padding:3px 7px;border-radius:4px;border:1px solid var(--border);color:var(--dimmer);font-family:var(--mono);cursor:pointer;transition:all .12s}
+.is-tf-chip.active{border-color:var(--green);color:var(--green);background:var(--green-bg)}
+.capture-area{flex:1;display:flex;flex-direction:column;gap:8px}
+.capture-text{width:100%;min-height:110px;max-height:180px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;color:var(--text);font-family:var(--sans);font-size:16px;line-height:1.5;outline:none;resize:none;-webkit-user-select:text;user-select:text}
+.capture-text:focus{border-color:var(--amber)}
+.capture-text::placeholder{color:var(--dimmer);font-size:15px}
+.capture-toolbar{display:flex;align-items:center;gap:8px;padding:4px 0}
+.cap-tool{width:48px;height:48px;border-radius:12px;border:1px solid var(--border);background:var(--bg3);color:var(--dim);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;transition:all .12s}
+.cap-tool:active{transform:scale(0.9)}
+.cap-tool.has-val{border-color:var(--amber);color:var(--amber);background:var(--amber-bg)}
+.time-chip{font-size:11px;font-family:var(--mono);padding:6px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--dim);cursor:pointer;transition:all .12s;margin-left:auto}
+.time-chip.active{border-color:var(--blue);color:var(--blue);background:var(--blue-bg)}
+.attach-bar{display:flex;align-items:center;gap:6px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:6px 8px}
+.attach-preview{flex:1;font-size:12px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.attach-clear{font-size:10px;color:var(--red);cursor:pointer;padding:2px 6px}
+.bottom-action{position:fixed;bottom:0;left:0;right:0;padding:8px 12px max(env(safe-area-inset-bottom),12px);background:linear-gradient(transparent,var(--bg) 20%);z-index:30;pointer-events:none}
+.save-btn{width:100%;padding:18px;border-radius:14px;border:none;background:var(--amber);color:var(--bg);font-family:var(--mono);font-size:16px;font-weight:800;letter-spacing:1px;cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:transparent;pointer-events:auto}
+.save-btn:disabled{opacity:.3;cursor:not-allowed}
+.save-btn:active{transform:scale(0.98)}
+.timer-float{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--bg2);border:2px solid var(--amber);border-radius:16px;padding:10px 20px;display:flex;align-items:center;gap:12px;z-index:35;box-shadow:0 4px 20px rgba(0,0,0,0.5);animation:fi .3s}
+.timer-float-time{font-family:var(--mono);font-size:24px;font-weight:900;color:var(--amber)}
+.timer-float-label{font-size:11px;color:var(--dim);max-width:100px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.timer-float-stop{width:32px;height:32px;border-radius:8px;border:1px solid var(--red);background:var(--red-bg);color:var(--red);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.timer-modal{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+.timer-card{background:var(--bg2);border:2px solid var(--amber);border-radius:20px;padding:28px;max-width:340px;width:100%;text-align:center}
+.timer-durations{display:flex;gap:10px;justify-content:center;margin:20px 0}
+.timer-dur{width:60px;height:60px;border-radius:14px;border:2px solid var(--border);background:var(--bg3);font-family:var(--mono);font-size:16px;font-weight:800;color:var(--dim);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.timer-dur:active{transform:scale(0.9)}
+.timer-dur.active{border-color:var(--amber);color:var(--amber);background:var(--amber-bg)}
+.timer-input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;color:var(--text);font-family:var(--sans);font-size:14px;outline:none;text-align:center;margin:8px 0 16px;-webkit-user-select:text;user-select:text}
+.timer-input:focus{border-color:var(--amber)}
+.timer-input::placeholder{color:var(--dimmer)}
+.pop-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:99}
+.time-pop{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:100%;max-width:360px;background:var(--bg2);border:2px solid var(--blue);border-bottom:none;border-radius:16px 16px 0 0;padding:14px 16px;z-index:100;animation:su .2s ease-out}
+@keyframes su{from{transform:translateX(-50%) translateY(100%)}to{transform:translateX(-50%) translateY(0)}}
+.time-options{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.time-opt{padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--bg3);color:var(--dim);font-size:13px;cursor:pointer;transition:all .12s;min-width:70px;text-align:center}
+.time-opt:active{transform:scale(0.95)}
+.time-opt.active{border-color:var(--blue);color:var(--blue);background:var(--blue-bg)}
+.time-section-label{font-size:9px;color:var(--dimmer);font-family:var(--mono);letter-spacing:1px;width:100%;text-align:center;margin-top:4px}
+.neuro-pop{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:100%;max-width:360px;background:var(--bg2);border:2px solid var(--amber);border-bottom:none;border-radius:16px 16px 0 0;padding:14px 16px;z-index:100;animation:su .2s ease-out}
+.neuro-pop-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.neuro-pop-title{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--amber);letter-spacing:1px}
+.neuro-pop-close{background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;color:var(--dim);font-size:12px;cursor:pointer}
+.neuro-row{display:flex;align-items:center;gap:0;margin-bottom:8px;justify-content:center}
+.neuro-tap{width:48px;height:48px;border-radius:12px;border:1px solid var(--border);background:var(--bg3);font-size:24px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;transition:all .1s;color:var(--dim)}
+.neuro-tap:active{transform:scale(0.9)}
+.neuro-tap.minus{color:var(--red);border-color:rgba(232,72,88,0.3)}
+.neuro-tap.plus{color:var(--green);border-color:rgba(69,208,128,0.3)}
+.neuro-mid{display:flex;align-items:center;gap:6px;min-width:110px;justify-content:center;margin:0 8px}
+.neuro-mid-emoji{font-size:24px}
+.neuro-mid-val{font-family:var(--mono);font-size:20px;font-weight:900;min-width:24px;text-align:center}
+.neuro-mid-val.pos{color:var(--green)}.neuro-mid-val.neg{color:var(--red)}.neuro-mid-val.neutral{color:var(--dimmer)}
+.neuro-reset-btn{font-size:11px;color:var(--dimmer);cursor:pointer;background:none;border:none;font-family:var(--mono);padding:6px 10px;display:block;margin:4px auto 0}
+.tit-review-row{display:flex;gap:8px;align-items:flex-start;margin-bottom:8px}
+.tit-review-label{font-size:11px;font-family:var(--mono);font-weight:800;color:var(--amber);letter-spacing:0.5px;min-width:50px;padding-top:12px;text-align:right;flex-shrink:0}
+.tit-review-val{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 12px;color:var(--text);font-size:15px;font-family:var(--sans);outline:none;-webkit-user-select:text;user-select:text}
+.tit-review-val:focus{border-color:var(--amber)}
+.intent-row{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:8px}
+.intent-chip{font-size:11px;padding:5px 10px;border-radius:6px;border:1px solid var(--border);background:var(--bg3);color:var(--dim);cursor:pointer;transition:all .12s}
+.intent-chip.active{border-color:var(--amber);color:var(--amber);background:var(--amber-bg)}
+.overlay{position:fixed;inset:0;background:var(--bg);z-index:50;display:flex;flex-direction:column;overflow:hidden}
+.overlay-header{padding:max(env(safe-area-inset-top),12px) 16px 12px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);flex-shrink:0}
+.overlay-title{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--amber);letter-spacing:1px}
+.overlay-close{background:none;border:1px solid var(--border);border-radius:8px;padding:8px 16px;color:var(--text);font-size:13px;font-family:var(--sans);cursor:pointer}
+.overlay-body{flex:1;overflow-y:auto;padding:16px;-webkit-overflow-scrolling:touch}
+.btn{padding:12px 16px;border-radius:10px;border:none;font-family:var(--sans);font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:all .15s}
+.btn-s{background:var(--bg3);color:var(--dim);border:1px solid var(--border)}
+.btn-p{background:var(--amber);color:var(--bg);width:100%}
+.empty{text-align:center;padding:48px 16px;color:var(--dimmer)}
+.sgroup{margin-bottom:20px}.slabel{font-size:11px;color:var(--dim);letter-spacing:1.5px;margin-bottom:8px;text-transform:uppercase;font-weight:700}
+.sfield{margin-bottom:10px}.sfield label{font-size:12px;color:var(--dimmer);display:block;margin-bottom:4px}
+.sfield input{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px;color:var(--text);font-family:var(--mono);font-size:14px;outline:none;-webkit-user-select:text;user-select:text}
+.sfield input:focus{border-color:var(--amber)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--bg);border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite}
+.gate-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+.gate-card{background:var(--bg2);border:2px solid var(--amber);border-radius:20px;padding:28px;max-width:340px;width:100%;text-align:center}
+.gate-icon{font-size:56px;margin-bottom:16px}.gate-title{font-family:var(--mono);font-size:18px;font-weight:800;color:var(--amber);margin-bottom:8px;letter-spacing:2px}
+.gate-sub{font-size:13px;color:var(--dim);margin-bottom:20px;line-height:1.6}.gate-item{font-size:14px;color:var(--text);margin-bottom:8px}
+.gate-divider{border:none;border-top:1px solid var(--border);margin:20px 0}.gate-pause{color:var(--amber);font-family:var(--mono);font-size:16px;font-weight:800;margin-bottom:12px;letter-spacing:3px}
+.gate-choice-row{display:flex;gap:14px;margin-top:16px}
+.gate-btn{flex:1;padding:24px 12px;border-radius:16px;border:2px solid var(--border);background:var(--bg3);font-family:var(--mono);font-size:16px;font-weight:800;cursor:pointer;transition:all .2s;display:flex;flex-direction:column;align-items:center;gap:10px}
+.gate-btn:active{transform:scale(0.95)}
+.gate-btn.power{border-color:var(--green);color:var(--green)}.gate-btn.power:active{background:var(--green-bg)}
+.gate-btn.self{border-color:var(--blue);color:var(--blue)}.gate-btn.self:active{background:var(--blue-bg)}
+.gate-emoji{font-size:40px}.gate-label{font-size:11px;color:var(--dim);font-weight:400;font-family:var(--sans)}
+.sat-banner{background:linear-gradient(135deg,rgba(245,176,64,0.08),rgba(245,176,64,0.03));border:1px solid rgba(245,176,64,0.25);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:all .15s}
+.sat-banner:active{transform:scale(0.98)}.sat-emoji{font-size:28px;flex-shrink:0}.sat-info{flex:1;min-width:0}
+.sat-label{font-size:9px;color:var(--amber);letter-spacing:1.5px;font-weight:700;text-transform:uppercase;font-family:var(--mono)}
+.sat-name{font-size:13px;color:var(--text);font-weight:600;margin-top:2px}.sat-desc{font-size:11px;color:var(--dim);margin-top:2px}
+.sat-xp{text-align:right;flex-shrink:0}.sat-xp-val{font-family:var(--mono);font-size:14px;font-weight:800;color:var(--amber)}.sat-xp-label{font-size:9px;color:var(--dim)}
+.sat-progress{display:flex;align-items:center;gap:8px;margin-top:8px}.sat-bar{flex:1;height:4px;background:var(--bg3);border-radius:2px;overflow:hidden}.sat-bar-fill{height:100%;background:var(--amber);border-radius:2px;transition:width .5s}.sat-count{font-size:10px;color:var(--dim);font-family:var(--mono)}
+.sat-done{opacity:.5;border-color:var(--green);background:rgba(69,208,128,0.05)}.sat-done .sat-label{color:var(--green)}
+.sat-skip-btn{background:none;border:none;color:var(--dimmer);font-size:10px;font-family:var(--mono);cursor:pointer;padding:4px 8px}
+.now-section{margin-bottom:20px}.now-label{font-size:10px;color:var(--amber);letter-spacing:2px;font-weight:700;text-transform:uppercase;font-family:var(--mono);margin-bottom:10px}
+.now-focus{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:8px}
+.now-focus-energy{font-size:32px;font-weight:800;color:var(--amber);font-family:var(--mono)}.now-focus-area{font-size:14px;color:var(--text);margin-top:4px;font-weight:600}.now-focus-sub{font-size:11px;color:var(--dim);margin-top:2px}
+.now-task{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:6px;display:flex;align-items:center;gap:10px}
+.now-task-pri{width:4px;height:32px;border-radius:2px;flex-shrink:0}.now-task-pri.high{background:var(--red)}.now-task-pri.standard{background:var(--amber)}.now-task-pri.low{background:var(--dim)}
+.now-task-info{flex:1;min-width:0}.now-task-name{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.now-task-meta{font-size:10px;color:var(--dim);margin-top:2px}
+.now-trail{display:flex;gap:6px;flex-wrap:wrap}.now-crumb{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:11px;color:var(--dim);flex:1;min-width:80px;text-align:center}
+.now-crumb-type{font-size:16px;display:block;margin-bottom:2px}.now-crumb-time{font-size:9px;color:var(--dimmer)}
+.distract-btn{width:100%;padding:14px;border-radius:12px;border:2px dashed var(--red);background:var(--red-bg);color:var(--red);font-family:var(--mono);font-size:13px;font-weight:700;cursor:pointer}
+.now-empty{text-align:center;padding:20px;color:var(--dimmer);font-size:12px}.now-loading{text-align:center;padding:40px;color:var(--dim);font-size:12px}
+.inbox-nudge{background:linear-gradient(135deg,rgba(245,176,64,0.08),rgba(245,176,64,0.03));border:1px solid rgba(245,176,64,0.25);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--dim);cursor:pointer}.inbox-nudge b{color:var(--amber)}
+.inbox-progress{display:flex;align-items:center;gap:12px;width:100%;max-width:400px;padding:0 8px;margin-bottom:12px}
+.inbox-bar{flex:1;height:4px;background:var(--bg3);border-radius:2px;overflow:hidden}.inbox-bar-fill{height:100%;background:var(--amber);border-radius:2px;transition:width .3s}.inbox-stats{font-size:10px;color:var(--dim);font-family:var(--mono)}
+.inbox-row{position:relative;margin-bottom:6px;border-radius:10px;overflow:hidden}.inbox-row-inner{position:relative}
+.inbox-row-swipe-bg{position:absolute;inset:0;display:flex;align-items:center;font-size:24px;opacity:0;transition:opacity .1s}
+.inbox-row-bg-approve{background:var(--green-bg);justify-content:flex-start;padding-left:16px}.inbox-row-bg-delete{background:var(--red-bg);justify-content:flex-end;padding-right:16px}
+.inbox-row-content{position:relative;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:10px;z-index:1;touch-action:pan-y}
+.link-row{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.link-icon{font-size:16px;flex-shrink:0;width:24px;text-align:center}
+.link-input{flex:1;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px;color:var(--text);font-family:var(--sans);font-size:14px;outline:none;min-width:0;-webkit-user-select:text;user-select:text}
+.link-input:focus{border-color:var(--blue)}
+.link-input::placeholder{color:var(--dimmer);font-size:13px}
+.link-paste{width:44px;height:44px;border-radius:10px;border:1px solid var(--border);background:var(--bg3);color:var(--dim);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.link-paste:active{transform:scale(0.9)}
+.link-add{width:44px;height:44px;border-radius:10px;border:1px solid var(--border);background:var(--bg3);color:var(--dim);font-size:18px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.link-add:active{transform:scale(0.9)}
+.link-remove{width:44px;height:44px;border-radius:10px;border:1px solid rgba(232,72,88,0.3);background:var(--red-bg);color:var(--red);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.seed-row{display:flex;align-items:center;gap:0;padding:6px 0;justify-content:space-between;width:100%}
+.seed-label{font-size:9px;font-family:var(--mono);color:var(--dimmer);letter-spacing:1px;font-weight:700;display:none}
+.seed-chip{flex:1;height:48px;border-radius:12px;border:1px solid var(--border);background:var(--bg3);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:4px;transition:all .15s;-webkit-tap-highlight-color:transparent;margin:0 3px}
+.seed-chip:first-of-type{margin-left:0}.seed-chip:last-child{margin-right:0}
+.seed-chip:active{transform:scale(0.95)}
+.seed-chip.active{border-color:var(--amber);background:var(--amber-bg);box-shadow:0 0 12px rgba(245,176,64,0.2)}
+.seed-chip.marble-active{border-color:#e040e0;background:rgba(224,64,224,0.12);box-shadow:0 0 12px rgba(224,64,224,0.25)}
+.mic-recording{border-color:var(--red)!important;background:var(--red-bg)!important;animation:mic-pulse 1s infinite}
+.neuro-bar{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-bottom:10px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.neuro-bar-header{display:flex;align-items:center;justify-content:space-between}
+.neuro-bar-title{font-size:11px;font-family:var(--mono);font-weight:700;color:var(--amber);letter-spacing:1px}
+.neuro-bar-toggle{font-size:11px;color:var(--dimmer);font-family:var(--mono)}
+.neuro-bar-preview{display:flex;gap:8px;margin-top:8px;justify-content:space-between}
+.neuro-bar-item{display:flex;align-items:center;gap:3px;font-size:13px}
+.neuro-bar-item .nval{font-family:var(--mono);font-size:13px;font-weight:800;min-width:14px}
+.neuro-bar-item .nval.pos{color:var(--green)}.neuro-bar-item .nval.neg{color:var(--red)}.neuro-bar-item .nval.neutral{color:var(--dimmer)}
+.neuro-bar-expand{display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+.neuro-bar.open .neuro-bar-expand{display:block}
+.neuro-bar.open .neuro-bar-toggle{transform:rotate(180deg)}
+.ai-proposal{width:100%;background:var(--bg2);border:1px solid rgba(245,176,64,0.3);border-radius:12px;padding:14px;margin-bottom:10px}
+.ai-proposal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.ai-proposal-title{font-size:11px;font-family:var(--mono);font-weight:700;color:var(--amber);letter-spacing:1px}
+.ai-proposal-edit{font-size:11px;color:var(--dim);background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;cursor:pointer;font-family:var(--mono)}
+.ai-proposal-body{font-size:14px;color:var(--text);line-height:1.6}
+.ai-proposal-body .step{display:flex;gap:8px;margin-bottom:6px}
+.ai-proposal-body .step-arrow{color:var(--amber);font-weight:800;flex-shrink:0}
+.ai-proposal-textarea{width:100%;min-height:80px;background:var(--bg3);border:1px solid var(--amber);border-radius:10px;padding:12px;color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.6;outline:none;resize:vertical;-webkit-user-select:text;user-select:text}
+.section-divider{width:100%;height:1px;background:var(--border);margin:8px 0}
+@keyframes mic-pulse{0%,100%{box-shadow:0 0 0 0 rgba(232,72,88,0.4)}50%{box-shadow:0 0 0 8px rgba(232,72,88,0)}}
+.mic-hold-hint{position:fixed;bottom:160px;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--red);border-radius:10px;padding:8px 16px;font-size:12px;color:var(--red);font-family:var(--mono);z-index:35;animation:fi .2s}
+.recording-float{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--bg2);border:2px solid var(--red);border-radius:16px;padding:10px 20px;display:flex;align-items:center;gap:12px;z-index:35;box-shadow:0 4px 20px rgba(0,0,0,0.5);animation:fi .3s}
+.recording-float-time{font-family:var(--mono);font-size:24px;font-weight:900;color:var(--red)}
+.recording-float-label{font-size:11px;color:var(--dim)}
+.recording-float-stop{width:32px;height:32px;border-radius:8px;border:1px solid var(--red);background:var(--red-bg);color:var(--red);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-left"><span class="logo">⬡ ATLAS</span><span id="hVault"><span class="dot off"></span></span></div>
+  <div class="header-right">
+    <button class="hbtn" onclick="location.reload()">↻</button>
+    <button class="hbtn" onclick="showOverlay('now')">📡</button>
+    <button class="hbtn" onclick="showOverlay('inbox')">📥<span id="hInbox" class="badge-count" style="display:none"></span></button>
+    <button class="hbtn" onclick="showOverlay('settings')">⚙</button>
+  </div>
+</div>
+<div id="toast" class="toast"></div>
+<div id="gateOverlay" class="gate-overlay" style="display:none"></div>
+<div id="timerModal" style="display:none"></div>
+<div id="timerFloat" style="display:none"></div>
+<div id="inboxOverlay" class="overlay" style="display:none"></div>
+<div id="nowOverlay" class="overlay" style="display:none"></div>
+<div id="settingsOverlay" class="overlay" style="display:none"></div>
+<div id="timePop"></div>
+<div id="neuroPop"></div>
+<div class="drawer-backdrop" id="drawerBg" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-title">QUICK ACTIONS</div>
+  <div class="drawer-item" onclick="drawerHabit()"><span class="drawer-item-emoji">🔄</span><div class="drawer-item-text"><div class="drawer-item-name">Habit Check-in</div><div class="drawer-item-desc">Log from active habits</div></div></div>
+  <div class="drawer-item" onclick="drawerIntercept()"><span class="drawer-item-emoji">🛡️</span><div class="drawer-item-text"><div class="drawer-item-name">Intercept</div><div class="drawer-item-desc">Craving → HARD GATE</div></div></div>
+  <div class="drawer-item" onclick="drawerNeuro()"><span class="drawer-item-emoji">🧠</span><div class="drawer-item-text"><div class="drawer-item-name">Neuro Snapshot</div><div class="drawer-item-desc">6-axis state capture</div></div></div>
+  <div class="drawer-sep"></div>
+  <div class="drawer-item" onclick="drawerAction('water')"><span class="drawer-item-emoji">💧</span><div class="drawer-item-text"><div class="drawer-item-name">Water +1</div><div class="drawer-item-desc" id="waterCount">0 today</div></div></div>
+  <div class="drawer-item" onclick="drawerAction('coffee')"><span class="drawer-item-emoji">☕</span><div class="drawer-item-text"><div class="drawer-item-name">Coffee +1</div><div class="drawer-item-desc" id="coffeeCount">0 today</div></div></div>
+  <div class="drawer-item" onclick="drawerAction('supplement')"><span class="drawer-item-emoji">💊</span><div class="drawer-item-text"><div class="drawer-item-name">Supplement</div><div class="drawer-item-desc">Log supplement taken</div></div></div>
+  <div class="drawer-sep"></div>
+  <div class="drawer-title" style="margin-top:4px">COMING SOON</div>
+  <div class="drawer-item" style="opacity:0.4"><span class="drawer-item-emoji">☀️</span><div class="drawer-item-text"><div class="drawer-item-name">Morning Flow</div><div class="drawer-item-desc">POE 1 guided</div></div></div>
+  <div class="drawer-item" style="opacity:0.4"><span class="drawer-item-emoji">🌙</span><div class="drawer-item-text"><div class="drawer-item-name">Evening Flow</div><div class="drawer-item-desc">POE 3 guided</div></div></div>
+  <div class="drawer-item" style="opacity:0.4"><span class="drawer-item-emoji">📡</span><div class="drawer-item-text"><div class="drawer-item-name">Lifelog Search</div><div class="drawer-item-desc">Extract from transcripts</div></div></div>
+</div>
+<button class="drawer-toggle" id="drawerBtn" onclick="toggleDrawer()">≡</button>
+<div class="main">
+  <div id="satBanner"></div>
+  <div id="inboxNudge" class="inbox-nudge" style="display:none" onclick="showOverlay('inbox')"></div>
+  <div class="is-toggle" id="isToggle" onclick="toggleISPanel()">
+    <span class="is-toggle-label">STATE</span>
+    <span class="is-toggle-preview" id="isPreview">tap to log mood</span>
+    <span class="is-toggle-arrow">▼</span>
+  </div>
+  <div class="is-panel" id="isPanel">
+    <div class="is-chips">
+      <span class="is-chip" onclick="toggleIS(this,'positive')">😊 positive</span>
+      <span class="is-chip" onclick="toggleIS(this,'negative')">😔 negative</span>
+      <span class="is-chip" onclick="toggleIS(this,'neutral')">😐 neutral</span>
+      <span class="is-chip" onclick="toggleIS(this,'mixed')">🌀 mixed</span>
+    </div>
+    <div class="is-intensity">
+      <button class="is-int-btn" onclick="adjIS(-1)">−</button>
+      <span class="is-intensity-val" id="isIntVal">5</span>
+      <button class="is-int-btn" onclick="adjIS(1)">+</button>
+      <div class="is-tf">
+        <span class="is-tf-chip" onclick="toggleTF(this,'full')">FULL</span>
+        <span class="is-tf-chip active" onclick="toggleTF(this,'standard')">STD</span>
+        <span class="is-tf-chip" onclick="toggleTF(this,'maintenance')">MAINT</span>
+        <span class="is-tf-chip" onclick="toggleTF(this,'rest')">REST</span>
+      </div>
+    </div>
+  </div>
+  <div class="attach-bar" id="attachBar" style="display:none">
+    <span id="attachIcon">📎</span>
+    <span class="attach-preview" id="attachPreview"></span>
+    <span class="attach-clear" onclick="clearAttach()">✕</span>
+  </div>
+  <div class="capture-area">
+    <textarea class="capture-text" id="capText" placeholder="what's on your mind..." oninput="checkSave()"></textarea>
+    <div id="linkFields">
+      <div class="link-row" id="linkRow0">
+        <span class="link-icon">🔗</span>
+        <input class="link-input" id="linkInput0" type="url" placeholder="paste link..." oninput="checkSave()" />
+        <button class="link-paste" onclick="pasteClipboard(0)" title="Paste from clipboard">📋</button>
+        <button class="link-add" onclick="addLinkField()">＋</button>
+      </div>
+    </div>
+    <div class="seed-row" id="seedRow">
+      <button class="seed-chip" data-seed="content" onclick="toggleSeed(this,'content')">📢</button>
+      <button class="seed-chip" data-seed="moment" onclick="toggleSeed(this,'moment')">📸</button>
+      <button class="seed-chip" data-seed="plan" onclick="toggleSeed(this,'plan')">🌱</button>
+      <button class="seed-chip" data-seed="review" onclick="toggleSeed(this,'review')">🔍</button>
+      <button class="seed-chip" data-seed="reflect" onclick="toggleSeed(this,'reflect')">🔄</button>
+      <button class="seed-chip" data-seed="marble" onclick="toggleSeed(this,'marble')">💎</button>
+    </div>
+    <div class="capture-toolbar">
+      <button class="cap-tool" id="micBtn">🎙️</button>
+      <button class="cap-tool" id="attachBtn" onclick="openAttach()">📎</button>
+      <button class="cap-tool" id="timerBtn" onclick="openTimerModal()">⏱️</button>
+      <span class="time-chip" id="timeChip" onclick="openTimePicker()">now</span>
+    </div>
+  </div>
+</div>
+<div class="bottom-action">
+  <button class="save-btn" id="saveBtn" disabled onclick="submitCapture()">💾 SAVE</button>
+</div>
+
+<script>
+const TD=new Date().toISOString().split("T")[0];
+const NOW=()=>new Date().toISOString();
+const NS=()=>Date.now().toString(36);
+const sl=s=>(s||"x").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,40);
+const esc=s=>String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const IS_LOCAL=location.hostname==="localhost"||location.hostname==="127.0.0.1";
+const OBS_DEFAULT=IS_LOCAL?"http://127.0.0.1:27123":"http://192.168.1.127:27180";
+let OBS=localStorage.getItem("obs-url")||OBS_DEFAULT;
+const OBSK="80526ef42c147df114badb16f42bd8a947d63313f0a429128ffa6e67ab774a61";
+let processing=false,cKey=localStorage.getItem("ck")||"",vault=false,interceptPending=null;
+
+const NEURO_AXES=[{key:"drive",emoji:"🔥",name:"Drive"},{key:"mood",emoji:"😊",name:"Mood"},{key:"energy",emoji:"⚡",name:"Energy"},{key:"calm",emoji:"🧘",name:"Calm"},{key:"clarity",emoji:"🎯",name:"Clarity"},{key:"control",emoji:"🛡️",name:"Control"},{key:"interest",emoji:"🧲",name:"Interest"}];
+const TIT_KEYS=["what","why","how","when","with","where","cost","value","priority"];
+const TIT_LABELS={what:"WHAT",why:"WHY",how:"HOW",when:"WHEN",with:"WITH",where:"WHERE",cost:"COST",value:"VALUE",priority:"PRI"};
+const INTENT_LABELS={save:"📎 Save",schedule:"📅 Schedule",thought:"💭 Thought",action:"⚡ Action",transaction:"💳 Transaction",reminder:"📌 Reminder"};
+const SEED_TYPES={content:{emoji:"📢",name:"Content",desc:"Create, share, repurpose"},moment:{emoji:"📸",name:"Moment",desc:"Capture with full context"},plan:{emoji:"🌱",name:"Plan",desc:"Wish, goal, aspiration"},review:{emoji:"🔍",name:"Review",desc:"Feasibility, status check"},reflect:{emoji:"🔄",name:"Reflect",desc:"Process, learn, reframe"},marble:{emoji:"💎",name:"Marble It!",desc:"Non-negotiable, must happen"}};
+
+let innerState={valence:null,intensity:5,task_filter:"standard"};
+let captureTime="now";
+let attachment={type:null,value:null};
+let captureGeo=null;
+let captureLinks=[""];
+let captureSeed=null;
+let linkCounter=1;
+let oaiKey=localStorage.getItem("oai-key")||"";
+
+// Rotating placeholder
+const TIPS=["what's on your mind...","I just...","I need to...","bought...","feeling...","met with...","realized...","craving..."];
+let tipIdx=0;
+setInterval(()=>{const el=document.getElementById("capText");if(el&&!el.value&&document.activeElement!==el){tipIdx=(tipIdx+1)%TIPS.length;el.placeholder=TIPS[tipIdx]}},4000);
+
+function openStandaloneNeuro(){
+  const pop=document.getElementById("neuroPop");
+  window._snData={};NEURO_AXES.forEach(a=>window._snData[a.key]=5);
+  let html=NEURO_AXES.map(a=>{
+    return '<div class="neuro-row"><button class="neuro-tap minus" onclick="snTap(\''+a.key+'\',-1)">−</button><div class="neuro-mid"><span class="neuro-mid-emoji">'+a.emoji+'</span><span class="neuro-mid-val neutral" id="sn_'+a.key+'">·</span><span class="neuro-mid-name">'+a.name+'</span></div><button class="neuro-tap plus" onclick="snTap(\''+a.key+'\',1)">+</button></div>';
+  }).join("");
+  pop.innerHTML='<div class="pop-backdrop" onclick="closeStandaloneNeuro()"></div><div class="neuro-pop"><div class="neuro-pop-header"><span class="neuro-pop-title">🧠 NEURO SNAPSHOT</span><button class="neuro-pop-close" onclick="saveStandaloneNeuro()">Save</button></div>'+html+'<button class="neuro-reset-btn" onclick="snReset()">reset all</button></div>';
+}
+function snTap(axis,dir){const d=window._snData;d[axis]=Math.max(1,Math.min(10,(d[axis]||5)+dir));const el=document.getElementById("sn_"+axis);if(el){const v=d[axis];el.textContent=v===5?"·":v;el.className="neuro-mid-val "+(v>5?"pos":v<5?"neg":"neutral")}}
+function snReset(){NEURO_AXES.forEach(a=>{window._snData[a.key]=5;const el=document.getElementById("sn_"+a.key);if(el){el.textContent="·";el.className="neuro-mid-val neutral"}})}
+function closeStandaloneNeuro(){document.getElementById("neuroPop").innerHTML=""}
+async function saveStandaloneNeuro(){
+  const d=window._snData;const active=Object.entries(d).filter(([k,v])=>v!==5);
+  if(!active.length){closeStandaloneNeuro();toast("No changes to save","error");return}
+  let yaml="---\ntype: neuromarker\nstatus: complete\ncreated: "+NOW()+"\ndate: "+TD+"\n";
+  NEURO_AXES.forEach(a=>yaml+=a.key+": "+d[a.key]+"\n");
+  yaml+="tags:\n  - \"nelos/neuromarker\"\n  - \"v12\"\n---\n\n🧠 Neuro snapshot: "+active.map(([k,v])=>k+"="+v).join(", ")+"\n";
+  if(vault)try{await obsW("Health/neuromarkers/neuro_"+TD+"_"+NS()+".md",yaml);toast("🧠 Snapshot saved ("+active.length+" axes)","success")}catch(e){toast("Write failed","error")}
+  else toast("🧠 Saved locally (vault offline)","success");
+  closeStandaloneNeuro();onEntityCaptured("neuromarker");
+}
+
+// ─── INNER STATE ───
+function toggleISPanel(){const p=document.getElementById("isPanel"),t=document.getElementById("isToggle");p.classList.toggle("open");t.classList.toggle("open")}
+function toggleIS(el,val){document.querySelectorAll(".is-chip").forEach(c=>c.classList.remove("active"));if(innerState.valence===val){innerState.valence=null}else{innerState.valence=val;el.classList.add("active")}updISPreview()}
+function adjIS(d){innerState.intensity=Math.max(1,Math.min(10,innerState.intensity+d));document.getElementById("isIntVal").textContent=innerState.intensity;updISPreview()}
+function toggleTF(el,val){document.querySelectorAll(".is-tf-chip").forEach(c=>c.classList.remove("active"));innerState.task_filter=val;el.classList.add("active")}
+function updISPreview(){const v=innerState.valence;const em={positive:"😊",negative:"😔",neutral:"😐",mixed:"🌀"};document.getElementById("isPreview").textContent=v?`${em[v]} ${v} · ${innerState.intensity}/10`:"tap to log mood"}
+
+// ─── TIME PICKER ───
+function openTimePicker(){
+  const pop=document.getElementById("timePop");
+  const past=[{label:"just now",key:"just_now"},{label:"earlier today",key:"earlier"},{label:"yesterday",key:"yesterday"},{label:"last week",key:"last_week"}];
+  const future=[{label:"tomorrow",key:"tomorrow"},{label:"this week",key:"this_week"},{label:"next week",key:"next_week"}];
+  let html='<div class="time-section-label">PAST</div>'+past.map(o=>'<button class="time-opt '+(captureTime===o.key?"active":"")+'" onclick="setTime(\''+o.key+'\')">'+o.label+'</button>').join("")+
+    '<div class="time-section-label">FUTURE</div>'+future.map(o=>'<button class="time-opt '+(captureTime===o.key?"active":"")+'" onclick="setTime(\''+o.key+'\')">'+o.label+'</button>').join("")+
+    '<div class="time-section-label" style="margin-top:8px"><button class="time-opt" onclick="setTime(\'now\')" style="width:100%">⏺ now (default)</button></div>';
+  pop.innerHTML='<div class="pop-backdrop" onclick="closeTimePicker()"></div><div class="time-pop"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-family:var(--mono);font-size:12px;font-weight:700;color:var(--blue);letter-spacing:1px">🕐 WHEN</span><button class="neuro-pop-close" onclick="closeTimePicker()">Done</button></div><div class="time-options">'+html+'</div></div>';
+}
+function setTime(key){captureTime=key;const chip=document.getElementById("timeChip");chip.textContent=key==="now"?"now":key.replace(/_/g," ");chip.classList.toggle("active",key!=="now");closeTimePicker()}
+function closeTimePicker(){document.getElementById("timePop").innerHTML=""}
+
+// ─── TOOLBAR: CAMERA (removed — use attach) ───
+
+// ─── LINK FIELD MANAGEMENT ───
+function addLinkField(){
+  const container=document.getElementById("linkFields");
+  const id=linkCounter++;
+  const row=document.createElement("div");row.className="link-row";row.id="linkRow"+id;
+  row.innerHTML='<span class="link-icon">🔗</span><input class="link-input" id="linkInput'+id+'" type="url" placeholder="paste link..." oninput="checkSave()" /><button class="link-paste" onclick="pasteClipboard('+id+')">📋</button><button class="link-remove" onclick="removeLinkField('+id+')">✕</button>';
+  container.appendChild(row);
+}
+function removeLinkField(id){const row=document.getElementById("linkRow"+id);if(row)row.remove()}
+function getLinks(){const inputs=document.querySelectorAll(".link-input");const links=[];inputs.forEach(i=>{const v=i.value.trim();if(v)links.push(v)});return links}
+async function pasteClipboard(id){
+  try{
+    const text=await navigator.clipboard.readText();
+    if(text){document.getElementById("linkInput"+id).value=text.trim();checkSave();toast("📋 Pasted","success")}
+  }catch(e){toast("Clipboard access denied","error")}
+}
+
+// ─── SEED SELECTION ───
+function toggleSeed(el,seed){
+  if(captureSeed===seed){captureSeed=null;el.classList.remove("active","marble-active")}
+  else{document.querySelectorAll(".seed-chip").forEach(c=>c.classList.remove("active","marble-active"));captureSeed=seed;el.classList.add(seed==="marble"?"marble-active":"active")}
+}
+
+// ─── AUDIO: HOLD-TO-TALK + LONG SESSION ───
+let audioState={mode:null,mediaRec:null,chunks:[],stream:null,holdTimer:null,isHolding:false,longInterval:null,longSeconds:0};
+
+function setupMicButton(){
+  const btn=document.getElementById("micBtn");if(!btn)return;
+  let touchStart=0;let holdFired=false;
+  btn.addEventListener("touchstart",e=>{e.preventDefault();touchStart=Date.now();holdFired=false;audioState.isHolding=true;
+    audioState.holdTimer=setTimeout(()=>{if(audioState.isHolding){holdFired=true;startHoldRecord()}},400)},{passive:false});
+  btn.addEventListener("touchend",e=>{e.preventDefault();audioState.isHolding=false;
+    if(audioState.holdTimer)clearTimeout(audioState.holdTimer);
+    if(audioState.mode==="hold"){stopHoldRecord()}
+    else if(audioState.mode==="long"){stopLongRecord()}
+    else if(!holdFired){openLongRecordModal()}},{passive:false});
+  btn.addEventListener("click",e=>{if("ontouchstart" in window)return;
+    if(audioState.mode==="long"){stopLongRecord()}
+    else if(!audioState.mode){openLongRecordModal()}});
+}
+
+async function startHoldRecord(){
+  audioState.mode="hold";audioState.chunks=[];
+  const btn=document.getElementById("micBtn");btn.classList.add("mic-recording");
+  const hint=document.createElement("div");hint.className="mic-hold-hint";hint.id="micHint";hint.textContent="🎙️ Recording — release to send";document.body.appendChild(hint);
+  try{audioState.stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    audioState.mediaRec=new MediaRecorder(audioState.stream,{mimeType:"audio/webm"});
+    audioState.mediaRec.ondataavailable=e=>{if(e.data.size>0)audioState.chunks.push(e.data)};
+    audioState.mediaRec.start();
+  }catch(e){toast("Mic access denied","error");cleanupAudio()}
+}
+
+async function stopHoldRecord(){
+  const btn=document.getElementById("micBtn");btn.classList.remove("mic-recording");
+  const hint=document.getElementById("micHint");if(hint)hint.remove();
+  if(!audioState.mediaRec||audioState.mediaRec.state==="inactive"){cleanupAudio();return}
+  audioState.mediaRec.onstop=async()=>{
+    const blob=new Blob(audioState.chunks,{type:"audio/webm"});cleanupAudio();
+    if(blob.size<1000){toast("Too short — try again","error");return}
+    toast("🎙️ Transcribing...","success");
+    try{
+      const text=await transcribeAudio(blob);
+      if(!text){toast("No speech detected","error");return}
+      if(text.toLowerCase().startsWith("quick")){await quickCapture(text);return}
+      document.getElementById("capText").value=text;checkSave();toast("🎙️ Ready — edit or save","success");
+    }catch(e){toast("Transcription failed: "+e.message,"error")}
+  };
+  audioState.mediaRec.stop();
+}
+
+function openLongRecordModal(){
+  if(audioState.mode){toast("Already recording","error");return}
+  const m=document.getElementById("timerModal");
+  m.innerHTML='<div class="timer-modal"><div class="timer-card"><div style="font-size:40px;margin-bottom:8px">🎙️</div><div style="font-family:var(--mono);font-size:16px;font-weight:800;color:var(--red);letter-spacing:2px;margin-bottom:16px">LONG RECORDING</div><div style="font-size:13px;color:var(--dim);margin-bottom:20px;line-height:1.6">For meetings, monologues, extended thoughts.<br>Tap stop when done — ATLAS will transcribe and process.</div><button class="btn btn-p" style="background:var(--red)" onclick="startLongRecord()">⏺ START RECORDING</button><button class="btn btn-s" style="margin-top:8px;width:100%" onclick="closeLongRecordModal()">Cancel</button></div></div>';
+  m.style.display="block";
+}
+function closeLongRecordModal(){document.getElementById("timerModal").innerHTML="";document.getElementById("timerModal").style.display="none"}
+
+async function startLongRecord(){
+  closeLongRecordModal();audioState.mode="long";audioState.chunks=[];audioState.longSeconds=0;
+  const btn=document.getElementById("micBtn");btn.classList.add("mic-recording");
+  try{audioState.stream=await navigator.mediaDevices.getUserMedia({audio:true});
+    audioState.mediaRec=new MediaRecorder(audioState.stream,{mimeType:"audio/webm"});
+    audioState.mediaRec.ondataavailable=e=>{if(e.data.size>0)audioState.chunks.push(e.data)};
+    audioState.mediaRec.start(1000);
+    audioState.longInterval=setInterval(()=>{audioState.longSeconds++;renderRecordingFloat()},1000);
+    renderRecordingFloat();
+  }catch(e){toast("Mic access denied","error");cleanupAudio()}
+}
+
+function renderRecordingFloat(){
+  const f=document.getElementById("timerFloat");
+  const m=Math.floor(audioState.longSeconds/60),s=audioState.longSeconds%60;
+  f.innerHTML='<div class="recording-float"><div class="recording-float-time" style="color:var(--red)">⏺ '+m+":"+s.toString().padStart(2,"0")+'</div><div class="recording-float-label">Recording...</div><button class="recording-float-stop" onclick="stopLongRecord()">■</button></div>';
+  f.style.display="block";
+}
+
+async function stopLongRecord(){
+  const btn=document.getElementById("micBtn");btn.classList.remove("mic-recording");
+  if(audioState.longInterval)clearInterval(audioState.longInterval);
+  document.getElementById("timerFloat").style.display="none";
+  if(!audioState.mediaRec||audioState.mediaRec.state==="inactive"){cleanupAudio();return}
+  audioState.mediaRec.onstop=async()=>{
+    const blob=new Blob(audioState.chunks,{type:"audio/webm"});const duration=audioState.longSeconds;cleanupAudio();
+    toast("🎙️ Transcribing "+duration+"s of audio...","success");
+    try{
+      const text=await transcribeAudio(blob);
+      if(!text){toast("No speech detected","error");return}
+      document.getElementById("capText").value=text;checkSave();
+      toast("🎙️ "+duration+"s transcribed — review and save","success");
+    }catch(e){toast("Transcription failed: "+e.message,"error")}
+  };
+  audioState.mediaRec.stop();
+}
+
+function cleanupAudio(){
+  if(audioState.stream)audioState.stream.getTracks().forEach(t=>t.stop());
+  audioState.mode=null;audioState.mediaRec=null;audioState.chunks=[];audioState.stream=null;audioState.isHolding=false;
+  if(audioState.longInterval)clearInterval(audioState.longInterval);audioState.longInterval=null;audioState.longSeconds=0;
+}
+
+async function transcribeAudio(blob){
+  if(oaiKey){return await whisperTranscribe(blob)}
+  if("webkitSpeechRecognition" in window||"SpeechRecognition" in window){return await webSpeechFallback(blob)}
+  throw new Error("Set OpenAI API key in Settings for audio transcription")
+}
+
+async function whisperTranscribe(blob){
+  const form=new FormData();form.append("file",blob,"recording.webm");form.append("model","whisper-1");form.append("language","en");
+  const r=await fetch("https://api.openai.com/v1/audio/transcriptions",{method:"POST",headers:{"Authorization":"Bearer "+oaiKey},body:form});
+  if(!r.ok)throw new Error("Whisper API "+r.status);const d=await r.json();return d.text||""
+}
+
+function webSpeechFallback(blob){
+  return new Promise((resolve,reject)=>{
+    const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+    if(!SR)return reject(new Error("Speech recognition not available"));
+    const rec=new SR();rec.continuous=true;rec.interimResults=false;rec.lang="en-US";
+    let result="";
+    rec.onresult=e=>{for(let i=e.resultIndex;i<e.results.length;i++)if(e.results[i].isFinal)result+=e.results[i][0].transcript+" "};
+    rec.onerror=e=>reject(new Error(e.error));
+    rec.onend=()=>resolve(result.trim());
+    const audio=new Audio(URL.createObjectURL(blob));audio.play();
+    setTimeout(()=>{rec.start();setTimeout(()=>rec.stop(),30000)},100);
+  })
+}
+
+// ─── QUICK CAPTURE BYPASS ───
+async function quickCapture(text){
+  const clean=text.replace(/^quick\s*/i,"").trim();
+  if(!clean){toast("Nothing to capture","error");return}
+  const time=new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+  const entry="- [ ] "+time+" — "+clean+"\n";
+  if(vault){
+    const dailyPath="Agenda/daily/daily_"+TD+".md";
+    let content=await obsR(dailyPath).catch(()=>null);
+    if(content){
+      if(content.includes("## Quick Captures")){content=content.replace("## Quick Captures\n","## Quick Captures\n"+entry)}
+      else{content+="\n\n## Quick Captures\n"+entry}
+      await obsW(dailyPath,content).catch(()=>{});
+    }else{
+      const md="---\ntype: daily\nlayer: jar\nstatus: active\ncreated: "+TD+"\nupdated: "+TD+"\ndate: "+TD+"\ntags:\n  - \"nelos/daily\"\n  - \"v12\"\n---\n\n## Quick Captures\n"+entry;
+      await obsW(dailyPath,md).catch(()=>{});
+    }
+  }
+  toast("⚡ Quick: "+clean,"success");onEntityCaptured("daily");
+}
+
+// ─── TOOLBAR: FILE ATTACH ───
+function openAttach(){
+  if(navigator.clipboard&&navigator.clipboard.readText){
+    navigator.clipboard.readText().then(text=>{
+      if(text&&(text.startsWith("http://")||text.startsWith("https://"))){setAttach("link",text);return}
+      showFilePicker();
+    }).catch(()=>showFilePicker());
+  }else{showFilePicker()}
+}
+function showFilePicker(){const inp=document.createElement("input");inp.type="file";inp.accept="image/*,application/pdf,.doc,.docx,.txt";inp.onchange=e=>{const f=e.target.files[0];if(f)setAttach("file",f.name)};inp.click()}
+function setAttach(type,value){
+  attachment={type,value};const icons={link:"🔗",file:"📄",photo:"📷",audio:"🎙️"};
+  document.getElementById("attachIcon").textContent=icons[type]||"📎";
+  document.getElementById("attachPreview").textContent=type==="link"?value.slice(0,50)+(value.length>50?"...":""):value;
+  document.getElementById("attachBar").style.display="flex";document.getElementById("attachBtn").classList.add("has-val");
+}
+function clearAttach(){attachment={type:null,value:null};document.getElementById("attachBar").style.display="none";document.getElementById("attachBtn").classList.remove("has-val")}
+
+// ─── TIMER ───
+let timerState={active:false,seconds:0,remaining:0,label:"",interval:null,taskFile:null};
+
+function openTimerModal(){
+  if(timerState.active){toast("Timer already running","error");return}
+  const m=document.getElementById("timerModal");
+  m.innerHTML='<div class="timer-modal"><div class="timer-card"><div style="font-size:40px;margin-bottom:8px">⏱️</div><div style="font-family:var(--mono);font-size:16px;font-weight:800;color:var(--amber);letter-spacing:2px;margin-bottom:16px">START TIMER</div><div class="timer-durations"><button class="timer-dur" onclick="pickDur(this,180)">3m</button><button class="timer-dur" onclick="pickDur(this,420)">7m</button><button class="timer-dur active" onclick="pickDur(this,1500)">25m</button><button class="timer-dur" onclick="pickDur(this,2700)">45m</button></div><input class="timer-input" id="timerLabel" placeholder="what am I about to do? (optional)"><button class="btn btn-p" onclick="startTimer()">▶ START</button><button class="btn btn-s" style="margin-top:8px;width:100%" onclick="closeTimerModal()">Cancel</button></div></div>';
+  m.style.display="block";timerState.seconds=1500;
+}
+function pickDur(el,secs){document.querySelectorAll(".timer-dur").forEach(b=>b.classList.remove("active"));el.classList.add("active");timerState.seconds=secs}
+function closeTimerModal(){document.getElementById("timerModal").innerHTML="";document.getElementById("timerModal").style.display="none"}
+
+function startTimer(){
+  const label=document.getElementById("timerLabel")?.value?.trim()||"";
+  timerState.active=true;timerState.remaining=timerState.seconds;timerState.label=label;
+  closeTimerModal();
+  document.getElementById("timerBtn").classList.add("has-val");
+  if(vault&&label){
+    const fn="task_"+sl(label||"timer")+"_"+NS()+".md";timerState.taskFile=fn;
+    const md="---\ntype: task\nlayer: jar\nstatus: active\ncreated: "+TD+"\nupdated: "+TD+"\nsource: timer\ntask_type: action\nname: \""+label+"\"\ntimer_duration: "+timerState.seconds+"\ntimer_started: "+NOW()+"\nfriction: 3\npriority: standard\ntags:\n  - \"nelos/task\"\n  - \"v12\"\n---\n\n⏱️ Timer task: "+label+"\n";
+    obsW("Capture/inbox/"+fn,md).catch(()=>{});
+  }
+  renderTimerFloat();
+  timerState.interval=setInterval(()=>{
+    timerState.remaining--;
+    if(timerState.remaining<=0){clearInterval(timerState.interval);timerState.interval=null;timerComplete();return}
+    renderTimerFloat();
+  },1000);
+}
+
+function renderTimerFloat(){
+  const f=document.getElementById("timerFloat");
+  const m=Math.floor(timerState.remaining/60),s=timerState.remaining%60;
+  f.innerHTML='<div class="timer-float"><div class="timer-float-time">'+m+":"+s.toString().padStart(2,"0")+"</div>"+(timerState.label?'<div class="timer-float-label">'+esc(timerState.label)+"</div>":"")+'<button class="timer-float-stop" onclick="stopTimer()">■</button></div>';
+  f.style.display="block";
+}
+
+function stopTimer(){
+  if(timerState.interval)clearInterval(timerState.interval);
+  timerState.active=false;timerState.interval=null;
+  document.getElementById("timerFloat").style.display="none";
+  document.getElementById("timerBtn").classList.remove("has-val");
+  toast("⏱️ Timer stopped","success");
+}
+
+function timerComplete(){
+  timerState.active=false;
+  document.getElementById("timerFloat").style.display="none";
+  document.getElementById("timerBtn").classList.remove("has-val");
+  if("Notification" in window&&Notification.permission==="granted")new Notification("⏱️ Timer done!",{body:timerState.label||"Time's up"});
+  const outcome=prompt("⏱️ Timer done!\n\n"+(timerState.label||"What did you do?")+"\n\nHow'd it go?");
+  if(outcome&&vault&&timerState.taskFile){
+    obsR("Capture/inbox/"+timerState.taskFile).then(c=>{
+      if(!c)return;
+      let updated=updateYamlField(c,"status","complete");
+      updated+="\n\n## Outcome\n"+outcome+"\n\n**Duration:** "+Math.round(timerState.seconds/60)+" min\n**Completed:** "+NOW()+"\n";
+      obsW("Capture/inbox/"+timerState.taskFile,updated).then(()=>toast("✅ Timer task complete","success"));
+    }).catch(()=>{});
+  }
+  toast("⏱️ Done! "+(timerState.label||""),"success");
+}
+
+// ─── GEOLOCATION ───
+function captureLocation(){
+  if(!navigator.geolocation)return;
+  navigator.geolocation.getCurrentPosition(pos=>{
+    captureGeo={lat:pos.coords.latitude,long:pos.coords.longitude,accuracy:Math.round(pos.coords.accuracy),timestamp:NOW()};
+  },()=>{captureGeo=null},{enableHighAccuracy:false,timeout:5000,maximumAge:60000});
+}
+captureLocation();
+
+// ─── ENTITIES ───
+const ENTITIES={
+daily:{l:"Daily",e:"📋",dest:"Agenda/daily",fn:()=>"daily_"+TD+".md",tags:["nelos/daily","v12"],capture:"date, day_type, eating_window_start, eating_window_end, hydration_liters, wins_effort, wins_result, friction_points, notes, atlas_notes",autofill:"type: daily, layer: jar, status: active, created: "+TD+", updated: "+TD,stance:"Coach",gate:"proceed",tone:"supportive,energizing",keyFields:["date","day_type","energy","focus"]},
+task:{l:"Task",e:"🎯",dest:"Capture/inbox",fn:n=>"task_"+sl(n)+".md",tags:["nelos/task","v12"],capture:"name, atomic_action, success_condition, deadline, parent, reward, scheduled_time, scheduled_duration, notes, atlas_notes",autofill:"type: task, layer: jar, status: ready, created: "+TD+", updated: "+TD+", source: manual, task_type: action, friction: 5, priority: standard, time_estimate: 15",stance:"Supportive",gate:"SOFT_GATE",tone:"warm,action-oriented",keyFields:["name","status","priority","deadline","atomic_action"]},
+journal:{l:"Journal",e:"📝",dest:"Journals/entries",fn:()=>"journal_"+TD+"_"+NS()+".md",tags:["nelos/journal","v12"],capture:"journal_type, date, intel_gathered, people_mentioned, insights_captured, notes, atlas_notes",autofill:"type: journal, layer: marble, status: complete, created: "+TD+", updated: "+TD+", source: manual",stance:"Companion",gate:"proceed",tone:"quick,minimal,supportive",keyFields:["journal_type","date"]},
+habit:{l:"Habit",e:"🔄",dest:"Capture/inbox",fn:n=>"habit_"+sl(n)+".md",tags:["nelos/habit","v12"],capture:"name, habit_type, cue, craving, response, reward_program, frequency, scheduled_time, scheduled_duration, notes, atlas_notes",autofill:"type: habit, layer: marble, status: active, created: "+TD+", updated: "+TD+", source: manual, current_streak: 0, streak_goal: 66",stance:"Identity Mirror",gate:"SOFT_GATE",tone:"affirming,identity-reinforcing",keyFields:["name","habit_type","cue","frequency","scheduled_duration"]},
+purchase:{l:"Purchase",e:"💳",dest:"Capture/purchases",fn:()=>"purchase_"+TD+"_"+NS()+".md",tags:["nelos/purchase_actual","v12"],capture:"item_name, actual_cost, category, purchased_date, need_vs_want, vendor, payment_method, motivation, notes, atlas_notes",autofill:"type: purchase_actual, layer: marble, status: complete, created: "+TD+", updated: "+TD+", currency: TRY",stance:"Coach",gate:"checkpoint",tone:"prosperous,mindful,aligned",keyFields:["item_name","actual_cost","currency","vendor","category","need_vs_want"]},
+insight:{l:"Insight",e:"💡",dest:"Knowledge/insights",fn:()=>"insight_"+TD+"_"+NS()+".md",tags:["nelos/insight","v12"],capture:"name, insight_subtype, domain, origin, quick_summary, detail, application_ideas, when_to_use, notes, atlas_notes",autofill:"type: insight, layer: sand, status: captured, created: "+TD+", updated: "+TD+", source: manual",stance:"Coach",gate:"proceed",tone:"playful,encouraging",keyFields:["name","insight_subtype","domain","quick_summary"]},
+people:{l:"People",e:"👤",dest:"CRM/contacts",fn:n=>"person_"+sl(n)+".md",tags:["nelos/people","v12"],capture:"name, birthday, relationship_status, energy_impact, relationship_mode, contact_frequency_target, employer, job_title, shared_interests, notes, atlas_notes",autofill:"type: people, layer: sand, status: active, created: "+TD+", updated: "+TD+", source: manual, contact_streak: 0",stance:"Coach",gate:"checkpoint",tone:"relational,intentional,caring",keyFields:["name","employer","job_title","energy_impact","relationship_mode"]},
+supplement:{l:"Supplement",e:"💊",dest:"Health/supplements",fn:n=>"supplement_"+sl(n)+".md",tags:["nelos/supplement","v12"],capture:"name, supplement_type, brand, form, dose_per_unit, timing, frequency, why_taking, notes, atlas_notes",autofill:"type: supplement, layer: marble, status: active, created: "+TD+", updated: "+TD+", source: manual",stance:"Guide",gate:"proceed",tone:"informative,supportive",keyFields:["name","supplement_type","dose_per_unit","timing","frequency"]},
+intercept:{l:"Intercept",e:"🛡️",dest:"Capture/intercepts",fn:()=>"intercept_"+TD+"_"+NS()+".md",tags:["nelos/intercept","v12"],capture:"specific_item, intensity, trigger, notes, atlas_notes",autofill:"type: intercept, layer: marble, created: "+TD+", updated: "+TD+", source: mobile_artifact",stance:"Assertive",gate:"HARD_GATE",tone:"direct,no-nonsense,respectful",keyFields:["specific_item","intensity","trigger"]},
+sleep:{l:"Sleep",e:"😴",dest:"Health/sleep",fn:()=>"sleep_"+TD+".md",tags:["nelos/sleep","v12"],capture:"date, bedtime, wake_time, actual_sleep_minutes, sleep_quality, restfulness, morning_alertness, caffeine_last_time, dream_remembered, notes, atlas_notes",autofill:"type: sleep, layer: marble, status: complete, created: "+TD+", updated: "+TD+", source: manual",stance:"Guide",gate:"proceed",tone:"calm,supportive",keyFields:["date","bedtime","wake_time","sleep_quality","restfulness"]}
+};
+
+// ─── HELPERS ───
+function toast(m,t){t=t||"info";const e=document.getElementById("toast");e.className="toast "+t;e.textContent=m;e.style.display="flex";clearTimeout(e._t);e._t=setTimeout(()=>e.style.display="none",3000)}
+async function testV(){try{const r=await fetch(OBS+"/",{headers:{"Authorization":"Bearer "+OBSK}});vault=r.ok}catch(e){vault=false}document.getElementById("hVault").innerHTML='<span class="dot '+(vault?"on":"off")+'"></span>'}
+async function obsW(p,c){const r=await fetch(OBS+"/vault/"+encodeURI(p),{method:"PUT",headers:{"Authorization":"Bearer "+OBSK,"Content-Type":"text/markdown"},body:c});if(!r.ok)throw new Error("Vault "+r.status);return true}
+async function obsR(p){const r=await fetch(OBS+"/vault/"+encodeURI(p),{headers:{"Authorization":"Bearer "+OBSK,"Accept":"text/markdown"}});if(!r.ok)return null;return await r.text()}
+async function obsD(p){const r=await fetch(OBS+"/vault/"+encodeURI(p),{method:"DELETE",headers:{"Authorization":"Bearer "+OBSK}});return r.ok}
+async function obsSearch(q){const r=await fetch(OBS+"/search/simple/?query="+encodeURIComponent(q),{headers:{"Authorization":"Bearer "+OBSK}});if(!r.ok)return[];return await r.json()}
+async function obsDir(f){const r=await fetch(OBS+"/vault/"+f,{headers:{"Authorization":"Bearer "+OBSK}});if(!r.ok)return[];const d=await r.json();return d.files||[]}
+async function claude(prompt,sys){
+  if(!cKey)throw new Error("Set Claude API key in Settings ⚙");
+  const body={model:"claude-sonnet-4-20250514",max_tokens:2000,messages:[{role:"user",content:prompt}]};
+  if(sys)body.system=sys;
+  const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json","x-api-key":cKey,"anthropic-version":"2023-06-01","anthropic-dangerous-direct-browser-access":"true"},body:JSON.stringify(body)});
+  if(!r.ok)throw new Error("Claude "+r.status);const d=await r.json();return d.content?.map(b=>b.text||"").join("\n")||""
+}
+function getCorrections(){try{return JSON.parse(localStorage.getItem("atlas-corrections")||"[]")}catch(e){return[]}}
+function logCorrection(entity,field,from,to){const log=getCorrections();log.unshift({entity,field,from,to,time:NOW()});if(log.length>50)log.length=50;localStorage.setItem("atlas-corrections",JSON.stringify(log))}
+function getCorrectionHints(et){const log=getCorrections().filter(c=>c.entity===et);if(!log.length)return"";return"\nUSER CORRECTIONS:\n"+[...new Set(log.map(c=>'"'+c.from+'" for '+c.field+' → "'+c.to+'"'))].slice(0,5).join("\n")}
+function parseYaml(text){const m=text.match(/^---\n([\s\S]*?)\n---/);if(!m)return{};const obj={};m[1].split("\n").forEach(l=>{const kv=l.match(/^(\w[\w_]*)\s*:\s*(.*)$/);if(kv)obj[kv[1].trim()]=kv[2].trim().replace(/^"|"$/g,"")});return obj}
+function updateYamlField(content,field,val){const re=new RegExp("^("+field+":\\s*).*$","m");if(re.test(content))return content.replace(re,"$1"+(val.includes(" ")?'"'+val+'"':val));const fm=content.match(/^(---\n)([\s\S]*?)(\n---)/);if(fm)return fm[1]+fm[2]+"\n"+field+": "+val+fm[3]+content.slice(fm[0].length);return content}
+
+// ─── CAPTURE FLOW ───
+function checkSave(){const hasText=document.getElementById("capText")?.value?.trim();const hasLinks=getLinks().length>0;document.getElementById("saveBtn").disabled=(!hasText&&!hasLinks)||processing}
+function resolveTime(){
+  const now=new Date();
+  if(captureTime==="now")return now.toISOString();
+  if(captureTime==="just_now")return new Date(now-5*60000).toISOString();
+  if(captureTime==="earlier"){const d=new Date(now);d.setHours(d.getHours()-3);return d.toISOString()}
+  if(captureTime==="yesterday")return new Date(now-86400000).toISOString();
+  if(captureTime==="last_week")return new Date(now-7*86400000).toISOString();
+  if(captureTime==="tomorrow")return new Date(now.getTime()+86400000).toISOString();
+  if(captureTime==="this_week")return new Date(now.getTime()+3*86400000).toISOString();
+  if(captureTime==="next_week")return new Date(now.getTime()+7*86400000).toISOString();
+  return now.toISOString();
+}
+
+const ROUTER_SYS="You are a classification + TIT decomposition engine for NELOS V12.\n\nINPUT: Freeform text from user capture, plus metadata (inner_state, timestamp, attachment).\n\nJOB 1 — TIT DECOMPOSITION: Break freeform text into Thought Inspiring Trigger dimensions:\n- WHAT: core subject/content\n- WHY: motivation, reason, purpose\n- HOW: method, approach, next step\n- WHEN: temporal reference (use capture_time context)\n- WITH: people involved\n- WHERE: location/context\n- COST: financial, time, or energy cost\n- VALUE: expected benefit/payoff\n- PRIORITY: urgency signal\nOnly include dimensions clearly present. Don't invent.\n\nJOB 2 — ENTITY ROUTING: Based on TIT decomposition + metadata, classify entity type(s).\nENTITY TYPES: purchase_actual, supplement, task, journal, daily, habit, insight, people, intercept, sleep\n\nJOB 3 — SOURCE INTENT: Infer purpose: save|schedule|thought|action|transaction|reminder\n\nReturn ONLY valid JSON:\n{\"tits\":{\"what\":\"...\",\"why\":\"...\"},\"source_intent\":\"schedule\",\"entities\":[{\"type\":\"task\",\"confidence\":0.95,\"extract\":\"call bank tomorrow\",\"reasoning\":\"temporal+action\"}]}";
+
+function buildEntityPrompt(ek,titData,extract){
+  const e=ENTITIES[ek];const corrections=getCorrectionHints(ek);
+  let sys="You are ATLAS, AI for NELOS V12 Light. Generate Obsidian markdown for a "+e.l+" entity.\nStance: "+e.stance+" | Tone: "+e.tone+"\nCAPTURE FIELDS: "+e.capture+"\nAUTO-FILL DEFAULTS: "+e.autofill+"\nTAGS: "+JSON.stringify(e.tags)+"\nTODAY: "+TD+" | NOW: "+NOW()+"\nRULES:\n- Output ONLY: YAML frontmatter between --- markers, then markdown body\n- Extract values from TIT data. Infer defaults for missing.\n- Arrays: YAML list format. Wikilinks: \"[[Link Name]]\". Unknown: empty string\n- Currency default: TRY. No code fences. No explanation.\n- ALWAYS include notes and atlas_notes fields.\n- Include source_from: \"[[capture_"+TD+"]]\" for backlink.";
+  if(ek==="intercept")sys+="\n- ONLY: type, layer, created, updated, source, specific_item, intensity, trigger, notes, atlas_notes, tags, source_from.";
+  if(ek==="purchase")sys+="\n- type MUST be purchase_actual. Include actual_cost, currency, vendor, category.";
+  if(ek==="people")sys+="\n- type MUST be people. Extract name, employer, job_title, energy_impact.";
+  sys+=corrections;
+  return{sys:sys,prompt:"Extract "+e.l+" from TIT data:\n"+JSON.stringify(titData,null,2)+'\n\nFocus: "'+extract+'"'}
+}
+
+async function submitCapture(){
+  const text=document.getElementById("capText").value.trim();const links=getLinks();if((!text&&!links.length)||processing)return;
+  processing=true;checkSave();
+  const btn=document.getElementById("saveBtn");btn.innerHTML='<span class="spinner"></span> Processing...';
+  captureLocation();
+  const inputText=text||(links.length?"Link capture: "+links.join(", "):"");
+  try{
+    const ts=resolveTime();
+    const capTs=new Date().toISOString().replace(/[-:T]/g,"").split(".")[0];
+    const capFile="capture_"+TD+"_"+capTs.slice(-6)+".md";
+    const input=JSON.stringify({text:inputText,inner_state:innerState,capture_time:captureTime,timestamp:ts,attachment:attachment.type?attachment:null,geo:captureGeo,links:links.length?links:undefined,seed:captureSeed||undefined},null,2);
+    const resp=await claude(input,ROUTER_SYS);
+    let parsed;
+    try{parsed=JSON.parse(resp.replace(/^```(?:json)?\n?/gm,"").replace(/\n?```$/gm,"").trim())}catch(e){throw new Error("Router parse failed")}
+    const tits=parsed.tits||{};
+    const intent=parsed.source_intent||"thought";
+    let md="---\ntype: capture\nstatus: inbox\nsource: manual\nsource_type: created\nsource_from: pwa_capture\nsource_intent: "+intent+"\n";
+    if(captureSeed)md+="workflow_seed: "+captureSeed+"\n";
+    md+="created: "+ts+"\ncapture_time: "+captureTime+"\n";
+    if(innerState.valence)md+="inner_state_valence: "+innerState.valence+"\n";
+    md+="inner_state_intensity: "+innerState.intensity+"\ntask_filter: "+innerState.task_filter+"\n";
+    if(captureGeo)md+="capture_lat: "+captureGeo.lat+"\ncapture_long: "+captureGeo.long+"\ncapture_accuracy: "+captureGeo.accuracy+"\ncapture_geo_timestamp: "+captureGeo.timestamp+"\n";
+    if(attachment.type)md+='attachment_type: '+attachment.type+'\nattachment_value: "'+(attachment.value||"").replace(/"/g,'\\"')+'"\n';
+    if(links.length){md+="links:\n";links.forEach(l=>md+='  - "'+l.replace(/"/g,'\\"')+'"\n')}
+    for(const[k,v]of Object.entries(tits))md+='tit_'+k+': "'+String(v).replace(/"/g,'\\"')+'"\n';
+    md+="---\n\n## Raw Capture\n"+(text||inputText)+"\n\n## TIT Decomposition\n";
+    for(const[k,v]of Object.entries(tits))md+="- **"+(TIT_LABELS[k]||k).toUpperCase()+":** "+v+"\n";
+    md+="\n## Source Intent\n"+(INTENT_LABELS[intent]||intent)+"\n";
+    if(captureSeed)md+="\n## Workflow Seed\n"+(SEED_TYPES[captureSeed]?.emoji||"")+" "+(SEED_TYPES[captureSeed]?.name||captureSeed)+"\n";
+    if(links.length)md+="\n## Links\n"+links.map(l=>"- "+l).join("\n")+"\n";
+    if(captureGeo)md+="\n## Location\n📍 "+captureGeo.lat.toFixed(5)+", "+captureGeo.long.toFixed(5)+" (±"+captureGeo.accuracy+"m)\n";
+    if(attachment.type)md+="\n## Attachment\n"+attachment.type+": "+attachment.value+"\n";
+    if(!parsed.entities?.length)throw new Error("No entities detected.");
+    const entities=[];
+    for(const det of parsed.entities){
+      const ek=det.type==="purchase_actual"?"purchase":det.type;
+      if(!ENTITIES[ek])continue;const e=ENTITIES[ek];
+      const ep=buildEntityPrompt(ek,tits,det.extract);
+      const raw=await claude(ep.prompt,ep.sys);
+      const name=(raw.match(/name:\s*"?(.+?)"?\s*$/m)||raw.match(/item_name:\s*"?(.+?)"?\s*$/m)||raw.match(/specific_item:\s*"?(.+?)"?\s*$/m)||["",det.extract])[1];
+      const fn=typeof e.fn==="function"?e.fn(name):e.fn;
+      let geoYaml="";
+      if(captureGeo)geoYaml="\ncapture_lat: "+captureGeo.lat+"\ncapture_long: "+captureGeo.long+"\ncapture_accuracy: "+captureGeo.accuracy;
+      let seedYaml="";
+      if(captureSeed)seedYaml="\nworkflow_seed: "+captureSeed;
+      let linksYaml="";
+      if(links.length){linksYaml="\nlinks:";links.forEach(l=>linksYaml+='\n  - "'+l.replace(/"/g,'\\"')+'"')}
+      const inboxMeta="\n<!-- ATLAS_META\ntits: "+JSON.stringify(tits)+"\nsource_intent: "+intent+"\nworkflow_seed: "+(captureSeed||"none")+"\nrouting_confidence: "+det.confidence+"\nrouting_reasoning: "+det.reasoning+"\ncapture_file: "+capFile+"\n-->";
+      let fullContent=raw;
+      if(geoYaml||seedYaml||linksYaml){const parts=fullContent.split("---");if(parts.length>=3){parts[1]=parts[1].trimEnd()+geoYaml+seedYaml+linksYaml+"\n";fullContent=parts.join("---")}}
+      fullContent+=inboxMeta;
+      entities.push({entityType:ek,name:name,filename:fn,fullContent:fullContent,tits:tits,intent:intent,seed:captureSeed,links:links,confidence:det.confidence,reasoning:det.reasoning});
+      if(ek==="intercept"){showInterceptGate(entities[entities.length-1]);clearForm();for(const other of entities.filter(x=>x.entityType!=="intercept"))await commitSingle(other);md+="\n## Created Entities\n"+entities.filter(x=>x.entityType!=="intercept").map(x=>"- [["+x.filename.replace(".md","")+"]]").join("\n")+"\n- _Intercept pending..._\n";if(vault)await obsW("Capture/captures/"+capFile,md);processing=false;checkSave();btn.textContent="💾 SAVE";return}
+    }
+    await commitToInbox(entities);
+    md+="\n## Created Entities\n"+entities.map(x=>"- [["+x.filename.replace(".md","")+"]]").join("\n")+"\n";
+    if(vault)await obsW("Capture/captures/"+capFile,md);
+    clearForm();
+  }catch(e){toast(e.message,"error")}
+  processing=false;checkSave();btn.textContent="💾 SAVE";updInboxCount();renderSatBanner();
+}
+
+async function commitSingle(item){try{if(vault)await obsW("Capture/inbox/"+item.filename,item.fullContent);onEntityCaptured(item.entityType);logCapture(item.entityType,item.name)}catch(e){toast("Write failed: "+item.filename,"error")}}
+async function commitToInbox(entities){let ok=0;for(const item of entities){try{if(vault){await obsW("Capture/inbox/"+item.filename,item.fullContent);ok++}}catch(e){toast("Write failed: "+item.filename,"error")}onEntityCaptured(item.entityType);logCapture(item.entityType,item.name)}if(ok)toast("✅ "+ok+" "+(ok===1?"note":"notes")+" → inbox","success");updInboxCount()}
+
+function clearForm(){
+  document.getElementById("capText").value="";
+  innerState={valence:null,intensity:5,task_filter:"standard"};captureTime="now";attachment={type:null,value:null};captureGeo=null;
+  captureSeed=null;linkCounter=1;
+  document.querySelectorAll(".is-chip").forEach(c=>c.classList.remove("active"));
+  document.getElementById("isIntVal").textContent="5";
+  document.querySelectorAll(".is-tf-chip").forEach(c=>{c.classList.remove("active");if(c.textContent==="STD")c.classList.add("active")});
+  document.getElementById("timeChip").textContent="now";document.getElementById("timeChip").classList.remove("active");
+  document.getElementById("attachBar").style.display="none";document.getElementById("attachBtn").classList.remove("has-val");
+  document.querySelectorAll(".seed-chip").forEach(c=>c.classList.remove("active","marble-active"));
+  document.getElementById("linkFields").innerHTML='<div class="link-row" id="linkRow0"><span class="link-icon">🔗</span><input class="link-input" id="linkInput0" type="url" placeholder="paste link..." oninput="checkSave()" /><button class="link-paste" onclick="pasteClipboard(0)" title="Paste from clipboard">📋</button><button class="link-add" onclick="addLinkField()">＋</button></div>';
+  const p=document.getElementById("isPanel"),t=document.getElementById("isToggle");p.classList.remove("open");t.classList.remove("open");
+  updISPreview();checkSave();captureLocation();
+}
+
+// ─── INTERCEPT GATE ───
+function showInterceptGate(data){
+  interceptPending=data;const yaml=data.fullContent;
+  const item=(yaml.match(/specific_item:\s*"?(.+?)"?\s*$/m)||["","Unknown"])[1];
+  const intensity=(yaml.match(/intensity:\s*(\d+)/m)||["","?"])[1];
+  const trigger=(yaml.match(/trigger:\s*"?(.+?)"?\s*$/m)||["","Unknown"])[1];
+  const o=document.getElementById("gateOverlay");
+  o.innerHTML='<div class="gate-card"><div class="gate-icon">🛡️</div><div class="gate-title">INTERCEPT</div><div class="gate-item"><b>Craving:</b> '+esc(item)+'</div><div class="gate-item"><b>Intensity:</b> '+esc(intensity)+'/10</div><div class="gate-item"><b>Trigger:</b> '+esc(trigger)+'</div><hr class="gate-divider"><div class="gate-pause">⏸️ PAUSE</div><div class="gate-sub">Take a breath. No middle ground.</div><div class="gate-choice-row"><button class="gate-btn power" onclick="interceptChoice(\'power_choice\')"><span class="gate-emoji">⚡</span><span>POWER</span><span class="gate-label">Override the impulse</span></button><button class="gate-btn self" onclick="interceptChoice(\'self_choice\')"><span class="gate-emoji">🧠</span><span>SELF</span><span class="gate-label">Honor the need</span></button></div></div>';
+  o.style.display="flex";
+}
+async function interceptChoice(choice){
+  if(!interceptPending)return;let c=interceptPending.fullContent;
+  const xp=choice==="power_choice"?15:0;const fields="binary_choice: "+choice+"\nxp_earned: "+xp;
+  const parts=c.split("---");if(parts.length>=3){parts[1]=parts[1].trimEnd()+"\n"+fields+"\n";c=parts.join("---")}
+  c+=choice==="power_choice"?"\n\n**Choice: ⚡ POWER** — Overrode the impulse. +15 XP.":"\n\n**Choice: 🧠 SELF** — Honored the need. No shame. Fresh start.";
+  interceptPending.fullContent=c;
+  try{if(vault){await obsW("Capture/inbox/"+interceptPending.filename,c);toast("✅ Intercept saved","success")}}catch(e){toast("Vault write failed","error")}
+  interceptPending=null;document.getElementById("gateOverlay").style.display="none";
+  onEntityCaptured("intercept");updInboxCount();toast(choice==="power_choice"?"⚡ POWER — +15 XP":"🧠 SELF — no shame","success");
+}
+
+// ─── NEUROMARKER (review phase) ───
+let reviewNeuro={};
+
+// ─── OVERLAYS ───
+function showOverlay(id){
+  if(id==="inbox")showInbox();
+  else if(id==="now")loadNow();
+  else if(id==="settings")showSettings();
+  document.getElementById(id+"Overlay").style.display="flex";
+}
+function hideOverlay(id){document.getElementById(id+"Overlay").style.display="none"}
+async function updInboxCount(){if(!vault)return;try{const files=await obsDir("Capture/inbox/");const c=files.filter(f=>f!=="README_INBOX.md"&&!f.startsWith("task_sat_")).length;const el=document.getElementById("hInbox");const n=document.getElementById("inboxNudge");if(c>0){el.textContent=c;el.style.display="inline";n.innerHTML="<b>"+c+"</b> item"+(c>1?"s":"")+" in inbox — tap to review";n.style.display="block"}else{el.style.display="none";n.style.display="none"}}catch(e){}}
+
+// ─── INBOX (2-speed: card swipe + list) ───
+let inboxItems=[],inboxIdx=0,inboxUndoStack=[];
+async function loadInboxItems(){
+  inboxItems=[];inboxIdx=0;if(!vault)return;
+  try{const files=await obsDir("Capture/inbox/");
+    for(const fname of files.filter(f=>f!=="README_INBOX.md"&&!f.startsWith("task_sat_"))){
+      const path="Capture/inbox/"+fname;const content=await obsR(path);if(!content)continue;
+      const y=parseYaml(content);if(!y.type)continue;
+      const ytype=(y.type||"").toLowerCase();
+      const ek=Object.keys(ENTITIES).find(k=>ENTITIES[k].tags[0]?.includes(ytype)||ytype===k)||(ytype==="purchase_actual"?"purchase":null);
+      if(!ek)continue;
+      let tits={},intent="",confidence=0,reasoning="",seed="";
+      const metaMatch=content.match(/<!-- ATLAS_META\n([\s\S]*?)-->/);
+      if(metaMatch){try{metaMatch[1].split("\n").forEach(l=>{const m=l.match(/^(\w+):\s*(.+)$/);if(m){if(m[1]==="tits")try{tits=JSON.parse(m[2])}catch(e){};if(m[1]==="source_intent")intent=m[2];if(m[1]==="workflow_seed")seed=m[2]==="none"?"":m[2];if(m[1]==="routing_confidence")confidence=parseFloat(m[2]);if(m[1]==="routing_reasoning")reasoning=m[2]}})}catch(e){}}
+      if(!Object.keys(tits).length){TIT_KEYS.forEach(k=>{const v=y["tit_"+k];if(v)tits[k]=v})}
+      if(!intent&&y.source_intent)intent=y.source_intent;
+      if(!seed&&y.workflow_seed)seed=y.workflow_seed;
+      inboxItems.push({path:path,content:content,yaml:y,entityType:ek,dest:ENTITIES[ek]?.dest||"Capture/inbox",filename:fname,tits:tits,intent:intent,seed:seed,confidence:confidence,reasoning:reasoning});
+    }
+  }catch(e){}
+}
+
+async function showInbox(){
+  const o=document.getElementById("inboxOverlay");
+  o.innerHTML='<div class="overlay-header"><span class="overlay-title">📥 INBOX</span><button class="overlay-close" onclick="hideOverlay(\'inbox\')">✕</button></div><div class="overlay-body"><div class="now-loading">Loading inbox...</div></div>';
+  o.style.display="flex";await loadInboxItems();
+  const po={critical:0,high:1,standard:2,low:3};
+  inboxItems.sort((a,b)=>{const ap=po[(a.yaml.priority||"standard").toLowerCase()]??2;const bp=po[(b.yaml.priority||"standard").toLowerCase()]??2;if(ap!==bp)return ap-bp;return(a.yaml.created||"").localeCompare(b.yaml.created||"")});
+  inboxIdx=0;inboxUndoStack=[];renderInboxCard();
+}
+
+function renderInboxCard(){
+  const o=document.getElementById("inboxOverlay");const live=inboxItems.filter(i=>!i._done);
+  if(!live.length){const a=inboxUndoStack.filter(u=>u.action==="approve").length,x=inboxUndoStack.filter(u=>u.action==="delete").length,any=a+x;
+    o.innerHTML='<div class="overlay-header"><span class="overlay-title">📥 INBOX</span><button class="overlay-close" onclick="hideOverlay(\'inbox\')">✕</button></div><div class="overlay-body"><div class="empty"><div style="font-size:48px;opacity:.4">'+(any?"✅":"📭")+'</div><div style="margin-top:16px;font-size:14px">'+(any?"Done! "+a+" routed · "+x+" removed":"Inbox empty — go capture something")+'</div><button class="btn btn-s" style="margin-top:20px;width:100%" onclick="hideOverlay(\'inbox\')">Close</button></div></div>';return}
+  while(inboxIdx<inboxItems.length&&inboxItems[inboxIdx]._done)inboxIdx++;
+  if(inboxIdx>=inboxItems.length){inboxIdx=0;while(inboxIdx<inboxItems.length&&inboxItems[inboxIdx]._done)inboxIdx++}
+  if(inboxIdx>=inboxItems.length){renderInboxCard();return}
+  const item=inboxItems[inboxIdx],e=ENTITIES[item.entityType],y=item.yaml;
+  const pri=(y.priority||"").toLowerCase(),priColor=pri==="critical"||pri==="high"?"var(--red)":pri==="low"?"var(--dim)":"var(--amber)";
+  const processed=inboxItems.filter(i=>i._done).length,pct=inboxItems.length?Math.round((processed/inboxItems.length)*100):0;
+  const name=y.name||y.item_name||y.specific_item||y.journal_type||item.filename;
+  const tits=item.tits||{};
+  const confPct=item.confidence?Math.round(item.confidence*100):0;
+  const confColor=confPct>=80?"var(--green)":confPct>=60?"var(--amber)":"var(--red)";
+  let titHtml="";
+  for(const k of TIT_KEYS){const v=tits[k]||"";if(v)titHtml+='<div style="display:flex;gap:8px;margin-bottom:6px"><span style="font-size:11px;font-family:var(--mono);font-weight:800;color:var(--amber);min-width:44px;text-align:right">'+TIT_LABELS[k]+'</span><span style="font-size:14px;color:var(--text)">'+esc(v)+'</span></div>'}
+  if(!titHtml)titHtml='<div style="font-size:11px;color:var(--dimmer);font-style:italic">No TIT data</div>';
+  const intentLabel=item.intent?INTENT_LABELS[item.intent]||item.intent:"";
+  const seedInfo=item.seed&&SEED_TYPES[item.seed]?SEED_TYPES[item.seed]:null;
+  o.innerHTML='<div class="overlay-header"><span class="overlay-title">📥 INBOX ('+live.length+')</span><div style="display:flex;gap:8px;align-items:center">'+(inboxUndoStack.length?'<button class="overlay-close" onclick="inboxUndo()">↩</button>':"")+'<button class="overlay-close" onclick="renderInboxList()">☰</button><button class="overlay-close" onclick="hideOverlay(\'inbox\')">✕</button></div></div><div class="overlay-body" style="padding:12px"><div class="inbox-progress"><div class="inbox-bar"><div class="inbox-bar-fill" style="width:'+pct+'%"></div></div><span class="inbox-stats">'+processed+'/'+inboxItems.length+'</span></div><div id="cardSwipeWrap" style="position:relative;overflow:hidden;margin:0 auto;max-width:400px"><div id="cardSwipeBg" style="position:absolute;inset:0;display:flex;align-items:center;font-size:36px;opacity:0;transition:opacity .1s;pointer-events:none"><span id="cardSwipeBgL" style="position:absolute;left:16px">✅</span><span id="cardSwipeBgR" style="position:absolute;right:16px">🗑️</span></div><div id="cardBody" style="background:var(--bg2);border:2px solid var(--border);border-radius:16px;padding:20px;position:relative;z-index:1;touch-action:pan-y"><div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><span style="font-size:24px">'+(e?.e||"📄")+'</span><span style="font-family:var(--mono);font-size:14px;font-weight:800;color:var(--amber);letter-spacing:1px;text-transform:uppercase">'+(e?.l||item.entityType)+'</span>'+(pri?'<span style="font-size:10px;font-family:var(--mono);font-weight:700;color:'+priColor+';margin-left:auto;text-transform:uppercase">'+esc(pri)+'</span>':"")+'</div><div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:10px">'+esc(name)+'</div>'+(seedInfo?'<div style="display:inline-block;font-size:12px;padding:5px 12px;border-radius:8px;background:'+(item.seed==="marble"?"rgba(224,64,224,0.12)":"var(--amber-bg)")+';color:'+(item.seed==="marble"?"#e040e0":"var(--amber)")+';font-family:var(--mono);margin-bottom:10px;font-weight:700">'+seedInfo.emoji+" "+seedInfo.name+'</div>':intentLabel?'<div style="display:inline-block;font-size:12px;padding:5px 12px;border-radius:8px;background:var(--amber-bg);color:var(--amber);font-family:var(--mono);margin-bottom:10px;font-weight:700">'+intentLabel+'</div>':"")+(confPct?'<span style="font-size:10px;color:var(--dimmer);font-family:var(--mono);margin-left:8px">AI: <span style="color:'+confColor+'">'+confPct+'%</span></span>':"")+'<div style="margin:12px 0;padding:10px;background:var(--bg);border-radius:10px">'+titHtml+'</div><div style="font-size:10px;color:var(--dimmer);font-family:var(--mono)">→ '+item.dest+'/</div></div></div><div style="display:flex;gap:10px;margin-top:12px;max-width:400px;margin-left:auto;margin-right:auto"><button onclick="cardAction(\'approve\')" style="flex:2;padding:18px;border-radius:14px;border:none;background:var(--green);color:#fff;font-family:var(--mono);font-size:16px;font-weight:800;cursor:pointer;min-height:56px">✅ Confirm</button><button onclick="renderInboxDetail('+inboxIdx+')" style="flex:1;padding:18px;border-radius:14px;border:1px solid var(--amber);background:var(--amber-bg);color:var(--amber);font-family:var(--mono);font-size:14px;font-weight:700;cursor:pointer;min-height:56px">✏️</button><button onclick="cardAction(\'delete\')" style="flex:1;padding:18px;border-radius:14px;border:1px solid var(--border);background:var(--bg3);color:var(--red);font-family:var(--mono);font-size:14px;font-weight:700;cursor:pointer;min-height:56px">🗑️</button></div><div style="text-align:center;margin-top:8px;font-size:11px;color:var(--dimmer)">swipe → confirm · swipe ← delete</div></div>';
+  setTimeout(()=>attachCardSwipe(),50);
+}
+
+function attachCardSwipe(){
+  const el=document.getElementById("cardBody");if(!el)return;
+  let sx=0,dx=0,sw=false;const th=100;
+  el.addEventListener("touchstart",e=>{sx=e.touches[0].clientX;dx=0;sw=true;el.style.transition="none"},{passive:true});
+  el.addEventListener("touchmove",e=>{if(!sw)return;dx=e.touches[0].clientX-sx;el.style.transform="translateX("+dx+"px) rotate("+dx*0.03+"deg)";el.style.opacity=Math.max(0.4,1-Math.abs(dx)/400);
+    const bg=document.getElementById("cardSwipeBg");const bgL=document.getElementById("cardSwipeBgL");const bgR=document.getElementById("cardSwipeBgR");
+    if(dx>30){bg.style.opacity=Math.min(dx/th,1);bgL.style.opacity=1;bgR.style.opacity=0}else if(dx<-30){bg.style.opacity=Math.min(Math.abs(dx)/th,1);bgL.style.opacity=0;bgR.style.opacity=1}else{bg.style.opacity=0}},{passive:true});
+  el.addEventListener("touchend",e=>{if(!sw)return;sw=false;el.style.transition="transform 0.3s ease-out, opacity 0.3s";
+    if(dx>th){el.style.transform="translateX(400px) rotate(12deg)";el.style.opacity="0";setTimeout(()=>cardAction("approve"),300)}
+    else if(dx<-th){el.style.transform="translateX(-400px) rotate(-12deg)";el.style.opacity="0";setTimeout(()=>cardAction("delete"),300)}
+    else{el.style.transform="translateX(0)";el.style.opacity="1";document.getElementById("cardSwipeBg").style.opacity=0}});
+}
+
+async function cardAction(action){
+  const item=inboxItems[inboxIdx];if(!item||item._done)return;item._done=true;
+  if(action==="approve"){try{const np=item.dest+"/"+item.filename;await obsW(np,item.content);if(np!==item.path)await obsD(item.path);toast("✅ → "+item.dest+"/","success")}catch(e){item._done=false;toast("Move failed","error");return}}
+  else if(action==="delete"){try{await obsD(item.path);toast("🗑️ Removed","success")}catch(e){item._done=false;toast("Delete failed","error");return}}
+  inboxUndoStack.push({idx:inboxIdx,action:action,item:item});onEntityCaptured(item.entityType);inboxIdx++;updInboxCount();renderInboxCard();
+}
+
+function inboxUndo(){if(!inboxUndoStack.length)return;const u=inboxUndoStack.pop();u.item._done=false;inboxIdx=u.idx;toast("↩ Undone","success");renderInboxCard()}
+
+function renderInboxList(){
+  const o=document.getElementById("inboxOverlay");const live=inboxItems.filter(i=>!i._done);
+  if(!live.length){renderInboxCard();return}
+  const processed=inboxItems.filter(i=>i._done).length,pct=inboxItems.length?Math.round((processed/inboxItems.length)*100):0;
+  let rh=live.map(item=>{const idx=inboxItems.indexOf(item),e=ENTITIES[item.entityType],y=item.yaml;
+    const name=y.name||y.item_name||y.specific_item||y.journal_type||item.filename;
+    const titSummary=item.tits?.what?esc(item.tits.what).slice(0,60):"";
+    const seedInfo=item.seed&&SEED_TYPES[item.seed]?SEED_TYPES[item.seed]:null;
+    const intentLabel=seedInfo?seedInfo.emoji+" "+seedInfo.name:(item.intent?INTENT_LABELS[item.intent]||item.intent:"");
+    return '<div class="inbox-row" id="inboxRow'+idx+'"><div class="inbox-row-inner"><div class="inbox-row-swipe-bg inbox-row-bg-approve">✅</div><div class="inbox-row-swipe-bg inbox-row-bg-delete">🗑️</div><div class="inbox-row-content" id="inboxRowC'+idx+'"><span style="font-size:20px;flex-shrink:0">'+(e?.e||"📄")+'</span><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(name)+'</div><div style="font-size:10px;color:var(--dim);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(intentLabel?intentLabel+" · ":"")+(titSummary||esc(e?.l||item.entityType))+'</div></div><span style="font-size:10px;color:var(--dimmer);flex-shrink:0">→</span></div></div></div>'}).join("");
+  o.innerHTML='<div class="overlay-header"><span class="overlay-title">📥 INBOX ('+live.length+')</span><div style="display:flex;gap:8px;align-items:center">'+(inboxUndoStack.length?'<button class="overlay-close" onclick="inboxUndo()">↩</button>':"")+'<button class="overlay-close" onclick="renderInboxCard()">▤</button><button class="overlay-close" onclick="hideOverlay(\'inbox\')">✕</button></div></div><div class="overlay-body" style="padding:8px 12px"><div class="inbox-progress"><div class="inbox-bar"><div class="inbox-bar-fill" style="width:'+pct+'%"></div></div><span class="inbox-stats">'+processed+'/'+inboxItems.length+'</span></div><div style="font-size:10px;color:var(--dimmer);margin-bottom:8px;text-align:center">swipe → confirm · tap to edit · swipe ← delete</div>'+rh+'</div>';
+  setTimeout(()=>{live.forEach(item=>attachRowSwipe(inboxItems.indexOf(item)))},50);
+}
+
+function attachRowSwipe(idx){
+  const el=document.getElementById("inboxRowC"+idx);if(!el)return;
+  let sx=0,dx=0,sw=false,mv=false;const th=80;
+  el.addEventListener("touchstart",e=>{sx=e.touches[0].clientX;dx=0;sw=true;mv=false;el.style.transition="none"},{passive:true});
+  el.addEventListener("touchmove",e=>{if(!sw)return;dx=e.touches[0].clientX-sx;if(Math.abs(dx)>10)mv=true;el.style.transform="translateX("+dx+"px)";
+    const row=document.getElementById("inboxRow"+idx);if(row){row.querySelector(".inbox-row-bg-approve").style.opacity=dx>30?Math.min(dx/th,1):0;row.querySelector(".inbox-row-bg-delete").style.opacity=dx<-30?Math.min(Math.abs(dx)/th,1):0}},{passive:true});
+  el.addEventListener("touchend",e=>{if(!sw)return;sw=false;el.style.transition="transform 0.2s ease-out";
+    if(dx>th){el.style.transform="translateX(400px)";setTimeout(()=>inboxListAction(idx,"approve"),200)}
+    else if(dx<-th){el.style.transform="translateX(-400px)";setTimeout(()=>inboxListAction(idx,"delete"),200)}
+    else{el.style.transform="translateX(0)";const row=document.getElementById("inboxRow"+idx);if(row){row.querySelector(".inbox-row-bg-approve").style.opacity=0;row.querySelector(".inbox-row-bg-delete").style.opacity=0}if(!mv)renderInboxDetail(idx)}});
+  el.addEventListener("click",e=>{if(!("ontouchstart" in window))renderInboxDetail(idx)});
+}
+
+async function inboxListAction(idx,action){
+  const item=inboxItems[idx];if(!item||item._done)return;item._done=true;
+  if(action==="approve"){try{const np=item.dest+"/"+item.filename;await obsW(np,item.content);if(np!==item.path)await obsD(item.path);toast("✅ → "+item.dest+"/","success")}catch(e){item._done=false;toast("Move failed","error");return}}
+  else if(action==="delete"){try{await obsD(item.path);toast("🗑️ Removed","success")}catch(e){item._done=false;toast("Delete failed","error");return}}
+  inboxUndoStack.push({idx:idx,action:action,item:item});onEntityCaptured(item.entityType);updInboxCount();renderInboxList();
+}
+
+function renderInboxDetail(idx){
+  const o=document.getElementById("inboxOverlay");const item=inboxItems[idx];if(!item)return;
+  const e=ENTITIES[item.entityType],y=item.yaml;reviewNeuro={};
+  NEURO_AXES.forEach(a=>reviewNeuro[a.key]=5);
+  const tits=item.tits||{};
+  let titHtml="";
+  for(const k of TIT_KEYS){const v=tits[k]||"";titHtml+='<div class="tit-review-row"><span class="tit-review-label">'+TIT_LABELS[k]+'</span><input class="tit-review-val" data-tit="'+k+'" value="'+esc(v)+'" placeholder="..." /></div>'}
+  const seedVal=item.seed||"";
+  let seedHtml='<div class="seed-row" style="margin-bottom:12px">';
+  for(const[k,s] of Object.entries(SEED_TYPES))seedHtml+='<button class="seed-chip '+(seedVal===k?(k==="marble"?"marble-active":"active"):"")+'" onclick="setReviewSeed('+idx+',\''+k+'\',this)">'+s.emoji+'</button>';
+  seedHtml+='</div>';
+  const confPct=item.confidence?Math.round(item.confidence*100):0;
+  const confColor=confPct>=80?"var(--green)":confPct>=60?"var(--amber)":"var(--red)";
+  let neuroPreview="";NEURO_AXES.forEach(a=>{neuroPreview+='<span class="neuro-bar-item">'+a.emoji+'<span class="nval neutral">5</span></span>'});
+  let neuroExpand="";NEURO_AXES.forEach(a=>{neuroExpand+='<div class="neuro-row"><button class="neuro-tap minus" onclick="adjReviewNeuro(\''+a.key+'\',-1)">−</button><div class="neuro-mid"><span class="neuro-mid-emoji">'+a.emoji+'</span><span class="neuro-mid-val neutral" id="rnv_'+a.key+'">5</span></div><button class="neuro-tap plus" onclick="adjReviewNeuro(\''+a.key+'\',1)">+</button></div>'});
+  const proposal=getAIProposal(item);
+  const proposalHtml=proposal?'<div class="ai-proposal" id="aiProposalCard"><div class="ai-proposal-header"><span class="ai-proposal-title">🤖 ATLAS PROPOSAL</span><button class="ai-proposal-edit" onclick="toggleProposalEdit('+idx+')">✏️ edit</button></div><div class="ai-proposal-body" id="aiProposalBody">'+proposal.split("\n").map(l=>l.trim()).filter(l=>l).map(l=>'<div class="step"><span class="step-arrow">→</span><span>'+esc(l.replace(/^→\s*/,""))+'</span></div>').join("")+'</div></div>':"";
+  o.innerHTML='<div class="overlay-header"><div style="display:flex;align-items:center;gap:8px"><button class="overlay-close" onclick="renderInboxCard()">←</button><span class="overlay-title">'+(e?.e||"📄")+" "+esc(e?.l||item.entityType)+'</span></div><button class="overlay-close" onclick="hideOverlay(\'inbox\')">✕</button></div><div class="overlay-body" style="padding:12px">'+(confPct?'<div style="font-size:11px;color:var(--dimmer);font-family:var(--mono);margin-bottom:10px">AI confidence: <span style="color:'+confColor+';font-weight:800">'+confPct+'%</span> '+(item.reasoning?esc(item.reasoning):"")+'</div>':"")+'<div style="font-size:11px;color:var(--amber);font-family:var(--mono);letter-spacing:1px;margin-bottom:8px;font-weight:700">WORKFLOW SEED</div>'+seedHtml+'<div class="section-divider"></div><div style="font-size:11px;color:var(--amber);font-family:var(--mono);letter-spacing:1px;margin-bottom:8px;font-weight:700">TIT BREAKDOWN</div><div id="titReviewFields">'+titHtml+'</div><div class="section-divider"></div><div class="neuro-bar" id="reviewNeuroBar" onclick="toggleReviewNeuroBar()"><div class="neuro-bar-header"><span class="neuro-bar-title">🧠 NEUROMARKER</span><span class="neuro-bar-toggle">▼</span></div><div class="neuro-bar-preview" id="neuroBarPreview">'+neuroPreview+'</div><div class="neuro-bar-expand" id="neuroBarExpand">'+neuroExpand+'<button class="neuro-reset-btn" onclick="event.stopPropagation();resetReviewNeuro()">reset all to 5</button></div></div>'+proposalHtml+'<div style="font-size:11px;color:var(--dimmer);font-family:var(--mono);margin:8px 0;padding:8px 12px;background:var(--bg2);border-radius:8px">→ '+item.dest+'/'+item.filename+'</div><div style="display:flex;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)"><button onclick="detailAction('+idx+',\'approve\')" style="flex:2;padding:18px;border-radius:14px;border:none;background:var(--green);color:#fff;font-family:var(--mono);font-size:16px;font-weight:800;cursor:pointer;min-height:56px">✅ Confirm</button><button onclick="detailAction('+idx+',\'delete\')" style="flex:1;padding:18px;border-radius:14px;border:1px solid var(--border);background:var(--bg3);color:var(--red);font-family:var(--mono);font-size:14px;font-weight:700;cursor:pointer;min-height:56px">🗑️</button></div></div>';
+}
+
+function toggleReviewNeuroBar(){const bar=document.getElementById("reviewNeuroBar");bar.classList.toggle("open")}
+function adjReviewNeuro(key,delta){
+  const v=Math.max(1,Math.min(10,(reviewNeuro[key]||5)+delta));reviewNeuro[key]=v;
+  const el=document.getElementById("rnv_"+key);if(el){el.textContent=v;el.className="neuro-mid-val "+(v>5?"pos":v<5?"neg":"neutral")}
+  updateNeuroBarPreview();
+}
+function resetReviewNeuro(){NEURO_AXES.forEach(a=>{reviewNeuro[a.key]=5;const el=document.getElementById("rnv_"+a.key);if(el){el.textContent="5";el.className="neuro-mid-val neutral"}});updateNeuroBarPreview()}
+function updateNeuroBarPreview(){
+  const p=document.getElementById("neuroBarPreview");if(!p)return;
+  p.innerHTML=NEURO_AXES.map(a=>{const v=reviewNeuro[a.key]||5;return '<span class="neuro-bar-item">'+a.emoji+'<span class="nval '+(v>5?"pos":v<5?"neg":"neutral")+'">'+v+'</span></span>'}).join("");
+}
+
+function getAIProposal(item){
+  if(!item.seed||item.seed==="none")return "";
+  const proposals={
+    content:"Queue as content draft\nIdentify format: article, carousel, podcast note, or quote\nLink to active projects and content calendar\nSuggest publish window based on patterns",
+    moment:"Full context snapshot saved\nPhoto + location + neuro state indexed\nLinked to today's daily note\nAvailable for journal and reflection",
+    plan:"Create as wish/aspiration\nResearch phase: gather 3 options\nCarrying capacity check: active plans count\nSchedule review in next weekly plan",
+    review:"Scan vault for related records\nWeb check feasibility if needed\nTime-boxed: 3 findings maximum\nForce decision: act now, plan it, or park it",
+    reflect:"Link to Philosophy and Wisdom entities\nExtract key insight or reframe\nFeed identity narrative\nSurface in next evening flow",
+    marble:"Track daily in morning briefing\nDay 1 of 66 starts on confirm\nCreate accountability chain\nNever let this fade — non-negotiable"
+  };
+  return proposals[item.seed]||"";
+}
+
+function toggleProposalEdit(idx){
+  const body=document.getElementById("aiProposalBody");if(!body)return;
+  if(body.querySelector("textarea")){
+    const ta=body.querySelector("textarea");
+    inboxItems[idx]._proposal=ta.value;
+    body.innerHTML=ta.value.split("\n").filter(l=>l.trim()).map(l=>'<div class="step"><span class="step-arrow">→</span><span>'+esc(l.replace(/^→\s*/,""))+'</span></div>').join("");
+  }else{
+    const current=inboxItems[idx]._proposal||getAIProposal(inboxItems[idx]);
+    body.innerHTML='<textarea class="ai-proposal-textarea" id="aiProposalText">'+esc(current)+'</textarea>';
+  }
+}
+
+function setReviewIntent(idx,intent,el){document.querySelectorAll(".intent-chip").forEach(c=>c.classList.remove("active"));el.classList.add("active");inboxItems[idx].intent=intent}
+function setReviewSeed(idx,seed,el){
+  const item=inboxItems[idx];
+  if(item.seed===seed){item.seed=null;el.classList.remove("active","marble-active")}
+  else{el.parentElement.querySelectorAll(".seed-chip").forEach(c=>c.classList.remove("active","marble-active"));item.seed=seed;el.classList.add(seed==="marble"?"marble-active":"active")}
+}
+
+async function detailAction(idx,action){
+  const item=inboxItems[idx];if(!item)return;
+  document.querySelectorAll(".tit-review-val").forEach(inp=>{const k=inp.dataset.tit,v=inp.value.trim();if(v&&item.tits[k]!==v){logCorrection(item.entityType,"tit_"+k,item.tits[k]||"",v);item.tits[k]=v}});
+  const neuroActive=Object.entries(reviewNeuro).filter(([k,v])=>v!==5);
+  if(neuroActive.length){let nc="";NEURO_AXES.forEach(a=>nc+="\nneuromarker_"+a.key+": "+(reviewNeuro[a.key]||5));
+    const parts=item.content.split("---");if(parts.length>=3){parts[1]=parts[1].trimEnd()+nc+"\n";item.content=parts.join("---")}onEntityCaptured("neuromarker")}
+  if(item.seed){const parts=item.content.split("---");if(parts.length>=3){if(!parts[1].includes("workflow_seed:")){parts[1]=parts[1].trimEnd()+"\nworkflow_seed: "+item.seed+"\n";item.content=parts.join("---")}else{item.content=item.content.replace(/workflow_seed:\s*.+/,"workflow_seed: "+item.seed)}}}
+  item._done=true;
+  if(action==="approve"){try{const np=item.dest+"/"+item.filename;await obsW(np,item.content);if(np!==item.path)await obsD(item.path);toast("✅ → "+item.dest+"/","success")}catch(e){item._done=false;toast("Move failed","error");return}}
+  else if(action==="delete"){try{await obsD(item.path);toast("🗑️ Removed","success")}catch(e){item._done=false;toast("Delete failed","error");return}}
+  inboxUndoStack.push({idx:idx,action:action,item:item});onEntityCaptured(item.entityType);updInboxCount();renderInboxCard();
+}
+
+// ─── NOW SCREEN ───
+async function loadNow(){
+  const o=document.getElementById("nowOverlay");
+  o.innerHTML='<div class="overlay-header"><span class="overlay-title">📡 NOW</span><button class="overlay-close" onclick="hideOverlay(\'now\')">✕</button></div><div class="overlay-body"><div class="now-loading">Scanning vault...</div></div>';
+  o.style.display="flex";
+  if(!vault){o.querySelector(".overlay-body").innerHTML='<div class="now-empty">Vault offline — connect in Settings</div>';return}
+  try{
+    const hour=new Date().getHours();
+    let energy="🌅",period="MORNING",advice="Fresh energy — tackle hard things first";
+    if(hour>=12&&hour<17){energy="☀️";period="AFTERNOON";advice="Steady state — process & create"}
+    else if(hour>=17&&hour<21){energy="🌆";period="EVENING";advice="Winding down — review & plan"}
+    else if(hour>=21||hour<5){energy="🌙";period="NIGHT";advice="Rest mode — capture only"}
+    else if(hour>=5&&hour<8){energy="🌅";period="EARLY";advice="Prime time — set intentions"}
+
+    let tasks=[];
+    try{const files=await obsDir("Capture/inbox/");
+      for(const f of files.filter(fn=>fn.startsWith("task_")&&!fn.startsWith("task_sat_")).slice(0,10)){
+        const c=await obsR("Capture/inbox/"+f);if(!c)continue;const y=parseYaml(c);
+        if(y.type==="task"&&y.status!=="complete")tasks.push({name:y.name||f,priority:y.priority||"standard",friction:y.friction||"5",file:f})
+      }
+    }catch(e){}
+    const po={critical:0,high:1,standard:2,low:3};
+    tasks.sort((a,b)=>(po[a.priority]??2)-(po[b.priority]??2));
+
+    let trail=[];
+    try{const caps=await obsDir("Capture/captures/");
+      const recent=caps.filter(f=>f.startsWith("capture_"+TD)).slice(-5);
+      for(const f of recent){const c=await obsR("Capture/captures/"+f);if(!c)continue;const y=parseYaml(c);
+        trail.push({type:y.source_intent||"capture",time:y.created||"",file:f})}
+    }catch(e){}
+
+    let html='<div class="now-section"><div class="now-label">ENERGY STATE</div><div class="now-focus"><div class="now-focus-energy">'+energy+' '+period+'</div><div class="now-focus-area">'+advice+'</div><div class="now-focus-sub">'+new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})+'</div></div></div>';
+
+    if(tasks.length){html+='<div class="now-section"><div class="now-label">ACTIVE TASKS ('+tasks.length+')</div>';
+      tasks.forEach(t=>{const pc=t.priority==="critical"||t.priority==="high"?"high":t.priority==="low"?"low":"standard";
+        html+='<div class="now-task"><div class="now-task-pri '+pc+'"></div><div class="now-task-info"><div class="now-task-name">'+esc(t.name)+'</div><div class="now-task-meta">'+esc(t.priority)+' · friction '+esc(t.friction)+'</div></div></div>'});
+      html+='</div>'}
+
+    if(trail.length){html+='<div class="now-section"><div class="now-label">TODAY\'S TRAIL</div><div class="now-trail">';
+      const icons={save:"📎",schedule:"📅",thought:"💭",action:"⚡",transaction:"💳",reminder:"📌",capture:"📝"};
+      trail.forEach(t=>{const time=t.time?new Date(t.time).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}):"";
+        html+='<div class="now-crumb"><span class="now-crumb-type">'+(icons[t.type]||"📝")+'</span>'+esc(t.type)+(time?'<div class="now-crumb-time">'+time+'</div>':"")+'</div>'});
+      html+='</div></div>'}
+
+    html+='<div class="now-section"><button class="distract-btn" onclick="hideOverlay(\'now\');drawerIntercept()">🛡️ DISTRACTED? LOG INTERCEPT</button></div>';
+    o.querySelector(".overlay-body").innerHTML=html;
+  }catch(e){o.querySelector(".overlay-body").innerHTML='<div class="now-empty">Error: '+esc(e.message)+'</div>'}
+}
+
+// ─── SETTINGS ───
+function showSettings(){
+  const o=document.getElementById("settingsOverlay");
+  const corrections=getCorrections();
+  o.innerHTML='<div class="overlay-header"><span class="overlay-title">⚙ SETTINGS</span><button class="overlay-close" onclick="hideOverlay(\'settings\')">✕</button></div><div class="overlay-body"><div class="sgroup"><div class="slabel">CONNECTION</div><div class="sfield"><label>Obsidian REST URL</label><input id="sObs" value="'+esc(OBS)+'" /></div><div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-s" style="flex:1" onclick="saveObs()">Save URL</button><button class="btn btn-s" style="flex:1" onclick="testV().then(()=>toast(vault?\'✅ Connected\':\'❌ Failed\',vault?\'success\':\'error\'))">Test</button></div></div><div class="sgroup"><div class="slabel">AI</div><div class="sfield"><label>Claude API Key</label><input id="sCk" type="password" value="'+esc(cKey)+'" /></div><button class="btn btn-s" style="width:100%;margin-top:8px" onclick="saveCk()">Save Key</button></div><div class="sgroup"><div class="slabel">AI — OPENAI (Whisper)</div><div class="sfield"><label>OpenAI API Key</label><input id="sOai" type="password" value="'+esc(oaiKey)+'" /></div><div style="font-size:10px;color:var(--dimmer);margin:4px 0">For long audio transcription. ~$0.006/min</div><button class="btn btn-s" style="width:100%;margin-top:8px" onclick="saveOai()">Save Key</button></div><div class="sgroup"><div class="slabel">NOTIFICATIONS</div><button class="btn btn-s" style="width:100%" onclick="reqNotif()">Enable Notifications</button></div><div class="sgroup"><div class="slabel">AI LEARNING ('+corrections.length+' corrections)</div><div style="font-size:11px;color:var(--dim);margin-bottom:8px">ATLAS learns from your inbox edits to improve future routing.</div>'+(corrections.length?'<div style="max-height:120px;overflow-y:auto;background:var(--bg2);border-radius:8px;padding:8px;margin-bottom:8px">'+corrections.slice(0,10).map(c=>'<div style="font-size:10px;color:var(--dimmer);margin-bottom:4px">'+esc(c.field)+': "'+esc(c.from)+'" → "'+esc(c.to)+'"</div>').join("")+'</div>':"")+'<button class="btn btn-s" style="width:100%" onclick="if(confirm(\'Clear all corrections?\')){localStorage.removeItem(\'atlas-corrections\');showSettings()}">Clear Learning Data</button></div><div class="sgroup"><div class="slabel">SYSTEM</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">ATLAS V12 Light · v10.0</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">Build: '+TD+'</div><div style="font-size:11px;color:var(--dimmer)">Vault: '+(vault?"✅ Connected":"❌ Offline")+'</div></div></div>';
+  o.style.display="flex";
+}
+function saveObs(){OBS=document.getElementById("sObs").value.trim().replace(/\/$/,"");localStorage.setItem("obs-url",OBS);testV();toast("URL saved","success")}
+function saveCk(){cKey=document.getElementById("sCk").value.trim();localStorage.setItem("ck",cKey);toast("Key saved","success")}
+function saveOai(){oaiKey=document.getElementById("sOai").value.trim();localStorage.setItem("oai-key",oaiKey);toast("Whisper key saved","success")}
+function reqNotif(){if("Notification" in window)Notification.requestPermission().then(p=>toast(p==="granted"?"✅ Enabled":"❌ Denied",p==="granted"?"success":"error"));else toast("Not supported","error")}
+
+// ─── SAT SYSTEM ───
+const SAT_TASKS=[
+  {id:"sat_daily",name:"Daily Log",desc:"Create today's daily entry",emoji:"📋",entity:"daily",xp:10,check:async()=>{if(!vault)return false;try{const c=await obsR("Agenda/daily/daily_"+TD+".md");return!!c}catch(e){return false}}},
+  {id:"sat_journal",name:"Journal Entry",desc:"Write a journal entry today",emoji:"📝",entity:"journal",xp:10,check:async()=>{if(!vault)return false;try{const files=await obsDir("Journals/entries/");return files.some(f=>f.includes(TD))}catch(e){return false}}},
+  {id:"sat_neuro",name:"Neuro Snapshot",desc:"Capture your 6-axis state",emoji:"🧠",entity:"neuromarker",xp:10,check:async()=>{if(!vault)return false;try{const files=await obsDir("Health/neuromarkers/");return files.some(f=>f.includes(TD))}catch(e){return false}}},
+  {id:"sat_inbox",name:"Process Inbox",desc:"Review inbox items",emoji:"📥",entity:"inbox",xp:15,check:async()=>{if(!vault)return false;try{const files=await obsDir("Capture/inbox/");return files.filter(f=>f!=="README_INBOX.md"&&!f.startsWith("task_sat_")).length===0}catch(e){return false}}},
+  {id:"sat_capture",name:"Capture Something",desc:"Log any thought, task, or insight",emoji:"💡",entity:"any",xp:5,check:async()=>{if(!vault)return false;try{const files=await obsDir("Capture/captures/");return files.some(f=>f.includes(TD))}catch(e){return false}}}
+];
+
+let satState={tasks:{},xp:0,skipped:{}};
+function loadSatState(){try{const s=JSON.parse(localStorage.getItem("sat-"+TD));if(s){satState=s;return}}catch(e){}satState={tasks:{},xp:0,skipped:{}};SAT_TASKS.forEach(t=>satState.tasks[t.id]=false)}
+function saveSatState(){localStorage.setItem("sat-"+TD,JSON.stringify(satState))}
+function onEntityCaptured(entityType){
+  SAT_TASKS.forEach(t=>{
+    if(satState.tasks[t.id])return;
+    if(t.entity===entityType||t.entity==="any"||(t.entity==="inbox"&&entityType==="inbox")){
+      satState.tasks[t.id]=true;satState.xp=(satState.xp||0)+t.xp;saveSatState();
+      toast("🎮 +"+t.xp+" XP — "+t.name,"success");renderSatBanner()}
+  });
+}
+function logCapture(entityType,name){
+  const trail=JSON.parse(localStorage.getItem("trail-"+TD)||"[]");
+  trail.push({type:entityType,name:name||"",time:NOW()});
+  localStorage.setItem("trail-"+TD,JSON.stringify(trail));
+}
+
+async function renderSatBanner(){
+  loadSatState();const el=document.getElementById("satBanner");
+  const done=Object.values(satState.tasks).filter(v=>v).length;const total=SAT_TASKS.length;const pct=Math.round((done/total)*100);
+  if(done>=total){el.innerHTML='<div class="sat-banner sat-done"><div class="sat-emoji">🏆</div><div class="sat-info"><div class="sat-label">SAT COMPLETE</div><div class="sat-name">All tasks done!</div><div class="sat-progress"><div class="sat-bar"><div class="sat-bar-fill" style="width:100%"></div></div><div class="sat-count">'+done+'/'+total+'</div></div></div><div class="sat-xp"><div class="sat-xp-val">'+(satState.xp||0)+'</div><div class="sat-xp-label">XP</div></div></div>';return}
+  const next=SAT_TASKS.find(t=>!satState.tasks[t.id]&&!satState.skipped[t.id])||SAT_TASKS.find(t=>!satState.tasks[t.id]);
+  if(!next){el.innerHTML="";return}
+  el.innerHTML='<div class="sat-banner" onclick="satAction(\''+next.id+'\')"><div class="sat-emoji">'+next.emoji+'</div><div class="sat-info"><div class="sat-label">SUGGESTED ACTION</div><div class="sat-name">'+next.name+'</div><div class="sat-desc">'+next.desc+'</div><div class="sat-progress"><div class="sat-bar"><div class="sat-bar-fill" style="width:'+pct+'%"></div></div><div class="sat-count">'+done+'/'+total+'</div></div></div><div class="sat-xp"><div class="sat-xp-val">+'+next.xp+'</div><div class="sat-xp-label">XP</div></div></div><div style="text-align:right;margin-top:4px"><button class="sat-skip-btn" onclick="event.stopPropagation();satSkip(\''+next.id+'\')">skip →</button></div>';
+  if(vault){for(const t of SAT_TASKS){if(!satState.tasks[t.id]){const ok=await t.check();if(ok){satState.tasks[t.id]=true;satState.xp=(satState.xp||0)+t.xp;saveSatState()}}};
+    const newDone=Object.values(satState.tasks).filter(v=>v).length;if(newDone!==done)renderSatBanner()}
+}
+
+function satAction(id){
+  const t=SAT_TASKS.find(s=>s.id===id);if(!t)return;
+  if(t.entity==="daily"){document.getElementById("capText").value="Daily log for today";checkSave()}
+  else if(t.entity==="journal"){document.getElementById("capText").value="Journal: ";document.getElementById("capText").focus();checkSave()}
+  else if(t.entity==="neuromarker"){openStandaloneNeuro()}
+  else if(t.entity==="inbox"){showOverlay("inbox")}
+  else{document.getElementById("capText").focus();checkSave()}
+}
+function satSkip(id){satState.skipped[id]=true;saveSatState();renderSatBanner()}
+
+// ─── DRAWER ACTIONS ───
+function closeDrawer(){document.getElementById("drawer").classList.remove("open");document.getElementById("drawerBg").classList.remove("open")}
+function toggleDrawer(){const d=document.getElementById("drawer"),b=document.getElementById("drawerBg");d.classList.toggle("open");b.classList.toggle("open");updDrawerCounts()}
+
+function updDrawerCounts(){
+  const water=parseInt(localStorage.getItem("water-"+TD)||"0");
+  const coffee=parseInt(localStorage.getItem("coffee-"+TD)||"0");
+  const wEl=document.getElementById("waterCount");if(wEl)wEl.textContent=water+" today";
+  const cEl=document.getElementById("coffeeCount");if(cEl)cEl.textContent=coffee+" today";
+}
+
+async function drawerHabit(){
+  closeDrawer();
+  if(!vault){toast("Vault offline","error");return}
+  try{
+    const files=await obsDir("Capture/inbox/");
+    const habits=[];
+    for(const f of files.filter(fn=>fn.startsWith("habit_")).slice(0,15)){
+      const c=await obsR("Capture/inbox/"+f);if(!c)continue;const y=parseYaml(c);
+      if(y.type==="habit"&&y.status==="active")habits.push({name:y.name||f,file:f,content:c})}
+    if(!habits.length){toast("No active habits found","error");return}
+    const pick=prompt("Which habit?\n\n"+habits.map((h,i)=>(i+1)+". "+h.name).join("\n")+"\n\nEnter number:");
+    if(!pick)return;const idx=parseInt(pick)-1;if(idx<0||idx>=habits.length)return;
+    const h=habits[idx];
+    let updated=updateYamlField(h.content,"current_streak",String(parseInt(parseYaml(h.content).current_streak||"0")+1));
+    updated=updateYamlField(updated,"updated",TD);
+    await obsW("Capture/inbox/"+h.file,updated);
+    toast("🔄 "+h.name+" +1 streak","success");onEntityCaptured("habit");
+  }catch(e){toast("Error: "+e.message,"error")}
+}
+
+function drawerIntercept(){
+  closeDrawer();
+  const item=prompt("🛡️ What's the craving/impulse?");if(!item)return;
+  const intensity=prompt("Intensity 1-10?")||"7";
+  const trigger=prompt("What triggered it?")||"";
+  const yaml="---\ntype: intercept\nlayer: marble\ncreated: "+NOW()+"\nupdated: "+TD+"\nsource: mobile_artifact\nspecific_item: \""+item.replace(/"/g,'\\"')+"\"\nintensity: "+intensity+"\ntrigger: \""+trigger.replace(/"/g,'\\"')+"\"\ntags:\n  - \"nelos/intercept\"\n  - \"v12\"\n---\n\n🛡️ Intercept: "+item+"\n";
+  const data={entityType:"intercept",filename:"intercept_"+TD+"_"+NS()+".md",fullContent:yaml};
+  showInterceptGate(data);
+}
+
+function drawerNeuro(){closeDrawer();openStandaloneNeuro()}
+
+async function drawerAction(type){
+  if(type==="water"){
+    const count=parseInt(localStorage.getItem("water-"+TD)||"0")+1;
+    localStorage.setItem("water-"+TD,String(count));
+    updDrawerCounts();
+    if(vault){
+      const daily="Agenda/daily/daily_"+TD+".md";
+      const c=await obsR(daily).catch(()=>null);
+      if(c){const updated=updateYamlField(c,"hydration_liters",String((count*0.25).toFixed(2)));await obsW(daily,updated).catch(()=>{})}
+    }
+    toast("💧 Water +1 ("+count+" today)","success");
+  }
+  else if(type==="coffee"){
+    const count=parseInt(localStorage.getItem("coffee-"+TD)||"0")+1;
+    localStorage.setItem("coffee-"+TD,String(count));
+    updDrawerCounts();
+    if(vault){
+      const daily="Agenda/daily/daily_"+TD+".md";
+      const c=await obsR(daily).catch(()=>null);
+      if(c){
+        const updated=updateYamlField(c,"caffeine_count",String(count));
+        const withTime=updateYamlField(updated,"caffeine_last_time",new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}));
+        await obsW(daily,withTime).catch(()=>{})
+      }
+    }
+    toast("☕ Coffee +1 ("+count+" today)","success");
+  }
+  else if(type==="supplement"){
+    closeDrawer();
+    const name=prompt("💊 Which supplement?");if(!name)return;
+    document.getElementById("capText").value="took "+name+" supplement";
+    checkSave();toast("💊 Type saved — hit SAVE to log","success");
+  }
+}
+
+// ─── INIT ───
+async function boot(){
+  await testV();
+  loadSatState();
+  await renderSatBanner();
+  updInboxCount();
+  updDrawerCounts();
+  captureLocation();
+  setupMicButton();
+  if("Notification" in window&&Notification.permission==="default")setTimeout(()=>Notification.requestPermission(),5000);
+}
+boot();
+</script>
+</body>
+</html>
