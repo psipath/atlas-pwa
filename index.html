@@ -449,7 +449,7 @@ async function bufferCleanExpired(){
 }
 
 // ─── LIMITLESS API ───
-const LMT_BASE="https://api.limitless.ai/v1";
+const LMT_BASE="https://atlas-proxy.psipath.workers.dev/v1";
 async function lmtFetch(path,params={}){
   const url=new URL(LMT_BASE+path);
   Object.entries(params).forEach(([k,v])=>{if(v!==undefined&&v!==null)url.searchParams.set(k,v)});
