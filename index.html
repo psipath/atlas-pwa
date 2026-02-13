@@ -202,6 +202,38 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);height:100dv
 .ai-proposal-body .step{display:flex;gap:8px;margin-bottom:6px}
 .ai-proposal-body .step-arrow{color:var(--amber);font-weight:800;flex-shrink:0}
 .ai-proposal-textarea{width:100%;min-height:80px;background:var(--bg3);border:1px solid var(--amber);border-radius:10px;padding:12px;color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.6;outline:none;resize:vertical;-webkit-user-select:text;user-select:text}
+/* ─── UNIFIED STATE CAPTURE BOTTOM SHEET ─── */
+.sc-sheet{position:fixed;bottom:0;left:0;right:0;max-height:85vh;overflow-y:auto;background:var(--bg);border-top:2px solid var(--amber);border-radius:20px 20px 0 0;z-index:10001;padding:0 16px 24px;animation:scSlide .25s ease-out}
+@keyframes scSlide{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.sc-handle{width:40px;height:4px;background:var(--border);border-radius:4px;margin:8px auto 8px}
+.sc-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.sc-title{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--amber);letter-spacing:1px}
+.sc-done{padding:8px 20px;border-radius:10px;border:none;background:var(--amber);color:var(--bg);font-family:var(--mono);font-size:13px;font-weight:800;cursor:pointer}
+.sc-section{margin-bottom:14px}
+.sc-label{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--dim);letter-spacing:1.5px;margin-bottom:8px}
+.sc-valence{display:flex;gap:6px}
+.sc-val-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 4px;border-radius:12px;border:1px solid var(--border);background:var(--bg3);color:var(--dim);font-size:11px;cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:transparent}
+.sc-val-btn.active{border-color:var(--amber);color:var(--amber);background:var(--amber-bg)}
+.sc-val-btn span{font-size:10px;font-family:var(--mono)}
+.sc-intensity{display:flex;align-items:center;gap:8px;margin-top:8px}
+.sc-adj{width:48px;height:48px;border-radius:12px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent}
+.sc-int-val{font-size:24px;font-weight:800;color:var(--amber);font-family:var(--mono);min-width:32px;text-align:center}
+.sc-tf{display:flex;gap:4px;margin-left:auto}
+.sc-tf-btn{font-size:9px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);color:var(--dimmer);font-family:var(--mono);cursor:pointer;transition:all .12s;-webkit-tap-highlight-color:transparent}
+.sc-tf-btn.active{border-color:var(--green);color:var(--green);background:var(--green-bg)}
+.sc-neuro-grid{display:flex;flex-direction:column;gap:4px}
+.sc-neuro-row{display:flex;align-items:center;gap:6px}
+.sc-neuro-mid{flex:1;display:flex;align-items:center;gap:6px;padding:4px 0}
+.sc-neuro-mid span:first-child{font-size:18px}
+.sc-neuro-val{font-size:18px;font-weight:800;font-family:var(--mono);min-width:24px;text-align:center}
+.sc-neuro-val.neutral{color:var(--dimmer)}
+.sc-neuro-val.pos{color:var(--green)}
+.sc-neuro-val.neg{color:var(--red)}
+.sc-neuro-name{font-size:12px;color:var(--dim);font-family:var(--mono)}
+.sc-ctx{max-height:0;overflow:hidden;transition:max-height .2s}
+.sc-ctx.open{max-height:120px}
+.sc-input{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg3);color:var(--text);font-size:14px;margin-bottom:6px;box-sizing:border-box}
+.sc-reset{width:100%;padding:10px;border:none;background:none;color:var(--dimmer);font-family:var(--mono);font-size:11px;cursor:pointer;text-align:center}
 .section-divider{width:100%;height:1px;background:var(--border);margin:8px 0}
 @keyframes mic-pulse{0%,100%{box-shadow:0 0 0 0 rgba(232,72,88,0.4)}50%{box-shadow:0 0 0 8px rgba(232,72,88,0)}}
 .mic-hold-hint{position:fixed;bottom:160px;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--red);border-radius:10px;padding:8px 16px;font-size:12px;color:var(--red);font-family:var(--mono);z-index:35;animation:fi .2s}
@@ -235,7 +267,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);height:100dv
   <div class="drawer-title">QUICK ACTIONS</div>
   <div class="drawer-item" onclick="drawerHabit()"><span class="drawer-item-emoji">🔄</span><div class="drawer-item-text"><div class="drawer-item-name">Habit Check-in</div><div class="drawer-item-desc">Log from active habits</div></div></div>
   <div class="drawer-item" onclick="drawerIntercept()"><span class="drawer-item-emoji">🛡️</span><div class="drawer-item-text"><div class="drawer-item-name">Intercept</div><div class="drawer-item-desc">Craving → HARD GATE</div></div></div>
-  <div class="drawer-item" onclick="drawerNeuro()"><span class="drawer-item-emoji">🧠</span><div class="drawer-item-text"><div class="drawer-item-name">Neuro Snapshot</div><div class="drawer-item-desc">6-axis state capture</div></div></div>
+  <div class="drawer-item" onclick="drawerNeuro()"><span class="drawer-item-emoji">🧠</span><div class="drawer-item-text"><div class="drawer-item-name">State Capture</div><div class="drawer-item-desc">Inner state + neuro + context</div></div></div>
   <div class="drawer-sep"></div>
   <div class="drawer-item" onclick="drawerAction('water')"><span class="drawer-item-emoji">💧</span><div class="drawer-item-text"><div class="drawer-item-name">Water +1</div><div class="drawer-item-desc" id="waterCount">0 today</div></div></div>
   <div class="drawer-item" onclick="drawerAction('coffee')"><span class="drawer-item-emoji">☕</span><div class="drawer-item-text"><div class="drawer-item-name">Coffee +1</div><div class="drawer-item-desc" id="coffeeCount">0 today</div></div></div>
@@ -251,29 +283,10 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);height:100dv
 <div class="main">
   <div id="satBanner"></div>
   <div id="inboxNudge" class="inbox-nudge" style="display:none" onclick="showOverlay('inbox')"></div>
-  <div class="is-toggle" id="isToggle" onclick="toggleISPanel()">
-    <span class="is-toggle-label">STATE</span>
-    <span class="is-toggle-preview" id="isPreview">tap to log mood</span>
-    <span class="is-toggle-arrow">▼</span>
-  </div>
-  <div class="is-panel" id="isPanel">
-    <div class="is-chips">
-      <span class="is-chip" onclick="toggleIS(this,'positive')">😊 positive</span>
-      <span class="is-chip" onclick="toggleIS(this,'negative')">😔 negative</span>
-      <span class="is-chip" onclick="toggleIS(this,'neutral')">😐 neutral</span>
-      <span class="is-chip" onclick="toggleIS(this,'mixed')">🌀 mixed</span>
-    </div>
-    <div class="is-intensity">
-      <button class="is-int-btn" onclick="adjIS(-1)">−</button>
-      <span class="is-intensity-val" id="isIntVal">5</span>
-      <button class="is-int-btn" onclick="adjIS(1)">+</button>
-      <div class="is-tf">
-        <span class="is-tf-chip" onclick="toggleTF(this,'full')">FULL</span>
-        <span class="is-tf-chip active" onclick="toggleTF(this,'standard')">STD</span>
-        <span class="is-tf-chip" onclick="toggleTF(this,'maintenance')">MAINT</span>
-        <span class="is-tf-chip" onclick="toggleTF(this,'rest')">REST</span>
-      </div>
-    </div>
+  <div class="is-toggle" id="isToggle" onclick="openStateCapture('capture',stateForCapture)">
+    <span class="is-toggle-label">🧠 STATE</span>
+    <span class="is-toggle-preview" id="isPreview">tap to capture state</span>
+    <span class="is-toggle-arrow">▶</span>
   </div>
   <div class="attach-bar" id="attachBar" style="display:none">
     <span id="attachIcon">📎</span>
@@ -668,34 +681,197 @@ const TIPS=["what's on your mind...","I just...","I need to...","bought...","fee
 let tipIdx=0;
 setInterval(()=>{const el=document.getElementById("capText");if(el&&!el.value&&document.activeElement!==el){tipIdx=(tipIdx+1)%TIPS.length;el.placeholder=TIPS[tipIdx]}},4000);
 
-function openStandaloneNeuro(){
-  const pop=document.getElementById("neuroPop");
-  window._snData={};NEURO_AXES.forEach(a=>window._snData[a.key]=5);
-  let html=NEURO_AXES.map(a=>{
-    return '<div class="neuro-row"><button class="neuro-tap minus" onclick="snTap(\''+a.key+'\',-1)">−</button><div class="neuro-mid"><span class="neuro-mid-emoji">'+a.emoji+'</span><span class="neuro-mid-val neutral" id="sn_'+a.key+'">·</span><span class="neuro-mid-name">'+a.name+'</span></div><button class="neuro-tap plus" onclick="snTap(\''+a.key+'\',1)">+</button></div>';
-  }).join("");
-  pop.innerHTML='<div class="pop-backdrop" onclick="closeStandaloneNeuro()"></div><div class="neuro-pop"><div class="neuro-pop-header"><span class="neuro-pop-title">🧠 NEURO SNAPSHOT</span><button class="neuro-pop-close" onclick="saveStandaloneNeuro()">Save</button></div>'+html+'<button class="neuro-reset-btn" onclick="snReset()">reset all</button></div>';
-}
-function snTap(axis,dir){const d=window._snData;d[axis]=Math.max(1,Math.min(10,(d[axis]||5)+dir));const el=document.getElementById("sn_"+axis);if(el){const v=d[axis];el.textContent=v===5?"·":v;el.className="neuro-mid-val "+(v>5?"pos":v<5?"neg":"neutral")}}
-function snReset(){NEURO_AXES.forEach(a=>{window._snData[a.key]=5;const el=document.getElementById("sn_"+a.key);if(el){el.textContent="·";el.className="neuro-mid-val neutral"}})}
+function openStandaloneNeuro(){openStateCapture("standalone",null)}
+function snTap(){}
+function snReset(){}
 function closeStandaloneNeuro(){document.getElementById("neuroPop").innerHTML=""}
-async function saveStandaloneNeuro(){
-  const d=window._snData;const active=Object.entries(d).filter(([k,v])=>v!==5);
-  if(!active.length){closeStandaloneNeuro();toast("No changes to save","error");return}
-  let yaml="---\ntype: neuromarker\nstatus: complete\ncreated: "+NOW()+"\ndate: "+TD+"\n";
-  NEURO_AXES.forEach(a=>yaml+=a.key+": "+d[a.key]+"\n");
-  yaml+="tags:\n  - \"nelos/neuromarker\"\n  - \"v12\"\n---\n\n🧠 Neuro snapshot: "+active.map(([k,v])=>k+"="+v).join(", ")+"\n";
-  if(vault)try{await obsW("Health/neuromarkers/neuro_"+TD+"_"+NS()+".md",yaml,true);toast("🧠 Snapshot saved ("+active.length+" axes)","success")}catch(e){toast("Write failed","error")}
-  else toast("🧠 Saved locally (vault offline)","success");
-  closeStandaloneNeuro();onEntityCaptured("neuromarker");
+async function saveStandaloneNeuro(){saveStateCapture()}
+
+// ─── UNIFIED STATE CAPTURE POPUP ───
+// One component. One pattern. One muscle memory.
+// Context: "capture","standalone","timer","morning","evening","intercept","moment"
+let _scData={valence:null,intensity:5,task_filter:"standard",neuro:{},context_who:"",context_where:""};
+let _scCallback=null;
+
+function openStateCapture(context,callback){
+  _scCallback=callback||null;
+  _scData={valence:null,intensity:5,task_filter:"standard",neuro:{},context_who:"",context_where:""};
+  NEURO_AXES.forEach(a=>_scData.neuro[a.key]=5);
+
+  const msgs={capture:"How are you right now?",standalone:"🧠 State Snapshot",timer:"How do you feel after that session?",morning:"How are you starting the day?",evening:"How are you ending the day?",intercept:"What state were you in?",moment:"Capture this moment's state"};
+  const title=msgs[context]||msgs.standalone;
+
+  const pop=document.getElementById("neuroPop");
+  let h='<div class="pop-backdrop" onclick="cancelStateCapture()"></div>';
+  h+='<div class="sc-sheet">';
+  h+='<div class="sc-handle"></div>';
+  h+='<div class="sc-header"><span class="sc-title">'+title+'</span><button class="sc-done" onclick="saveStateCapture()">Done</button></div>';
+
+  // Section 1: Inner State
+  h+='<div class="sc-section"><div class="sc-label">INNER STATE</div>';
+  h+='<div class="sc-valence">';
+  [{v:"positive",e:"😊"},{v:"negative",e:"😔"},{v:"neutral",e:"😐"},{v:"mixed",e:"🌀"}].forEach(o=>{
+    h+='<button class="sc-val-btn" id="sc_v_'+o.v+'" onclick="scValence(\''+o.v+'\')">'+o.e+'<span>'+o.v+'</span></button>';
+  });
+  h+='</div>';
+  h+='<div class="sc-intensity"><button class="sc-adj" onclick="scIntensity(-1)">−</button><span class="sc-int-val" id="sc_intensity">5</span><button class="sc-adj" onclick="scIntensity(1)">+</button>';
+  h+='<div class="sc-tf">';
+  ["full","standard","maintenance","rest"].forEach(t=>{
+    h+='<button class="sc-tf-btn'+(t==="standard"?" active":"")+'" onclick="scTaskFilter(this,\''+t+'\')">'+t.slice(0,4).toUpperCase()+'</button>';
+  });
+  h+='</div></div></div>';
+
+  // Section 2: Neuromarker
+  h+='<div class="sc-section"><div class="sc-label">NEUROMARKER</div>';
+  h+='<div class="sc-neuro-grid">';
+  NEURO_AXES.forEach(a=>{
+    h+='<div class="sc-neuro-row"><button class="sc-adj" onclick="scNeuro(\''+a.key+'\',-1)">−</button>';
+    h+='<div class="sc-neuro-mid"><span>'+a.emoji+'</span><span class="sc-neuro-val neutral" id="sc_n_'+a.key+'">·</span><span class="sc-neuro-name">'+a.name+'</span></div>';
+    h+='<button class="sc-adj" onclick="scNeuro(\''+a.key+'\',1)">+</button></div>';
+  });
+  h+='</div></div>';
+
+  // Section 3: Context (optional, collapsible)
+  h+='<div class="sc-section"><div class="sc-label" onclick="document.getElementById(\'scCtx\').classList.toggle(\'open\')" style="cursor:pointer">CONTEXT <span style="font-size:10px;color:var(--dimmer)">▼ optional</span></div>';
+  h+='<div id="scCtx" class="sc-ctx">';
+  h+='<input class="sc-input" id="sc_who" placeholder="👤 With who?" oninput="_scData.context_who=this.value" />';
+  h+='<input class="sc-input" id="sc_where" placeholder="📍 Where?" oninput="_scData.context_where=this.value" />';
+  h+='</div></div>';
+
+  h+='<button class="sc-reset" onclick="scReset()">reset all</button>';
+  h+='</div>';
+  pop.innerHTML=h;
 }
 
-// ─── INNER STATE ───
-function toggleISPanel(){const p=document.getElementById("isPanel"),t=document.getElementById("isToggle");p.classList.toggle("open");t.classList.toggle("open")}
-function toggleIS(el,val){document.querySelectorAll(".is-chip").forEach(c=>c.classList.remove("active"));if(innerState.valence===val){innerState.valence=null}else{innerState.valence=val;el.classList.add("active")}updISPreview()}
-function adjIS(d){innerState.intensity=Math.max(1,Math.min(10,innerState.intensity+d));document.getElementById("isIntVal").textContent=innerState.intensity;updISPreview()}
-function toggleTF(el,val){document.querySelectorAll(".is-tf-chip").forEach(c=>c.classList.remove("active"));innerState.task_filter=val;el.classList.add("active")}
-function updISPreview(){const v=innerState.valence;const em={positive:"😊",negative:"😔",neutral:"😐",mixed:"🌀"};document.getElementById("isPreview").textContent=v?`${em[v]} ${v} · ${innerState.intensity}/10`:"tap to log mood"}
+function scValence(v){
+  ["positive","negative","neutral","mixed"].forEach(x=>{
+    document.getElementById("sc_v_"+x).classList.remove("active");
+  });
+  if(_scData.valence===v){_scData.valence=null}
+  else{_scData.valence=v;document.getElementById("sc_v_"+v).classList.add("active")}
+}
+
+function scIntensity(d){
+  _scData.intensity=Math.max(1,Math.min(10,_scData.intensity+d));
+  document.getElementById("sc_intensity").textContent=_scData.intensity;
+}
+
+function scTaskFilter(el,v){
+  document.querySelectorAll(".sc-tf-btn").forEach(b=>b.classList.remove("active"));
+  el.classList.add("active");
+  _scData.task_filter=v;
+}
+
+function scNeuro(key,d){
+  const n=_scData.neuro;
+  n[key]=Math.max(1,Math.min(10,(n[key]||5)+d));
+  const el=document.getElementById("sc_n_"+key);
+  if(el){const v=n[key];el.textContent=v===5?"·":v;el.className="sc-neuro-val "+(v>5?"pos":v<5?"neg":"neutral")}
+}
+
+function scReset(){
+  _scData={valence:null,intensity:5,task_filter:"standard",neuro:{},context_who:"",context_where:""};
+  NEURO_AXES.forEach(a=>_scData.neuro[a.key]=5);
+  ["positive","negative","neutral","mixed"].forEach(x=>document.getElementById("sc_v_"+x)?.classList.remove("active"));
+  document.getElementById("sc_intensity").textContent="5";
+  NEURO_AXES.forEach(a=>{const el=document.getElementById("sc_n_"+a.key);if(el){el.textContent="·";el.className="sc-neuro-val neutral"}});
+  document.querySelectorAll(".sc-tf-btn").forEach(b=>b.classList.remove("active"));
+  document.querySelectorAll(".sc-tf-btn").forEach(b=>{if(b.textContent==="STAN")b.classList.add("active")});
+  if(document.getElementById("sc_who"))document.getElementById("sc_who").value="";
+  if(document.getElementById("sc_where"))document.getElementById("sc_where").value="";
+}
+
+function cancelStateCapture(){document.getElementById("neuroPop").innerHTML="";_scCallback=null}
+
+async function saveStateCapture(){
+  const hasNeuro=NEURO_AXES.some(a=>_scData.neuro[a.key]!==5);
+  const hasInner=_scData.valence!==null;
+  if(!hasNeuro&&!hasInner){cancelStateCapture();toast("No state changes","error");return}
+
+  // Build result object
+  const result={
+    valence:_scData.valence,
+    intensity:_scData.intensity,
+    task_filter:_scData.task_filter,
+    neuro:{...(_scData.neuro)},
+    context_who:_scData.context_who,
+    context_where:_scData.context_where,
+    timestamp:NOW()
+  };
+
+  document.getElementById("neuroPop").innerHTML="";
+
+  if(_scCallback){
+    await _scCallback(result);
+  }else{
+    // Default: save as standalone neuromarker to daily + vault
+    await saveStateToDaily(result);
+  }
+  toast("🧠 State captured","success");
+}
+
+async function saveStateToDaily(result){
+  // Write neuromarker to vault
+  if(vault){
+    const hasNeuro=NEURO_AXES.some(a=>result.neuro[a.key]!==5);
+    if(hasNeuro){
+      const hour=new Date().getHours();
+      const period=hour<12?"morning":hour<17?"midday":"evening";
+      let yaml="---\ntype: neuromarker\nlayer: jar\nstatus: captured\ncreated: \""+NOW()+"\"\nuuid: \""+TD.replace(/-/g,"")+NS()+"\"\ntags:\n  - \"nelos/neuromarker\"\n  - \"v12\"\ndate: \""+TD+"\"\nperiod: "+period+"\n";
+      NEURO_AXES.forEach(a=>yaml+=a.key+": "+result.neuro[a.key]+"\n");
+      const active=NEURO_AXES.filter(a=>result.neuro[a.key]!==5);
+      const avg=Math.round(active.reduce((s,a)=>s+result.neuro[a.key],0)/Math.max(active.length,1));
+      yaml+="composite: "+avg+"\n";
+      if(result.valence)yaml+="inner_state_valence: "+result.valence+"\ninner_state_intensity: "+result.intensity+"\n";
+      if(result.context_who)yaml+="context_who: \""+result.context_who+"\"\n";
+      if(result.context_where)yaml+="context_where: \""+result.context_where+"\"\n";
+      yaml+="---\n";
+      const fn="neuromarker_"+TD+"_"+NS()+".md";
+      await obsW("Health/neuromarkers/"+fn,yaml);
+    }
+
+    // Also update daily note neuromarker fields
+    try{
+      await ensureDaily();
+      const hour=new Date().getHours();
+      const period=hour<12?"morning":hour<17?"midday":"evening";
+      const path="Agenda/daily/daily_"+TD+".md";
+      let dc=await obsR(path);
+      if(dc&&hasNeuro){
+        const active=NEURO_AXES.filter(a=>result.neuro[a.key]!==5);
+        const vals=active.map(a=>a.key+":"+result.neuro[a.key]).join(", ");
+        dc=updateYamlField(dc,"neuromarkers_"+period,vals);
+        const avg=Math.round(active.reduce((s,a)=>s+result.neuro[a.key],0)/Math.max(active.length,1));
+        dc=updateYamlField(dc,"neuromarkers_composite",String(avg));
+        if(result.valence){
+          dc=updateYamlField(dc,period+"_mood",String(result.neuro.mood||5));
+          dc=updateYamlField(dc,period+"_energy",String(result.neuro.energy||5));
+        }
+        await obsW(path,dc);
+      }
+    }catch(e){console.log("[SC] daily update error:",e)}
+  }
+  onEntityCaptured("neuromarker");
+}
+
+// Capture screen callback — stores in innerState + captureNeuro for next save
+function stateForCapture(result){
+  innerState.valence=result.valence;
+  innerState.intensity=result.intensity;
+  innerState.task_filter=result.task_filter;
+  window._captureNeuro=result.neuro;
+  // Update preview
+  const em={positive:"😊",negative:"😔",neutral:"😐",mixed:"🌀"};
+  const preview=document.getElementById("isPreview");
+  if(preview){
+    const parts=[];
+    if(result.valence)parts.push(em[result.valence]+" "+result.valence+" · "+result.intensity+"/10");
+    const active=NEURO_AXES.filter(a=>result.neuro[a.key]!==5);
+    if(active.length)parts.push(active.map(a=>a.emoji+result.neuro[a.key]).join(" "));
+    preview.textContent=parts.length?parts.join(" │ "):"tap to capture state";
+  }
+  return Promise.resolve();
+}
 
 // ─── TIME PICKER ───
 function openTimePicker(){
@@ -980,7 +1156,7 @@ function timerComplete(){
   if("Notification" in window&&Notification.permission==="granted")new Notification("⏱️ Timer done!",{body:timerState.label||"Time's up"});
   const durMin=Math.round(timerState.seconds/60);
   const pop=document.getElementById("neuroPop");
-  pop.innerHTML='<div class="pop-backdrop" onclick="closeTimerFollowup()"></div><div class="neuro-pop" style="border-color:var(--amber)"><div class="neuro-pop-header"><span class="neuro-pop-title">⏱️ TIMER COMPLETE</span><button class="neuro-pop-close" onclick="closeTimerFollowup()">Done</button></div><div style="text-align:center;margin-bottom:12px"><div style="font-size:28px;margin-bottom:4px">✅</div><div style="font-size:16px;font-weight:700;color:var(--text)">'+(timerState.label||"Focus session")+'</div><div style="font-size:12px;color:var(--dim);font-family:var(--mono);margin-top:4px">'+durMin+' min completed</div></div><div style="font-size:11px;color:var(--amber);font-family:var(--mono);letter-spacing:1px;margin-bottom:6px;font-weight:700">HOW DID IT GO?</div><textarea id="timerOutcome" class="tit-review-val" style="min-height:60px;resize:vertical;margin-bottom:12px" placeholder="quick note (optional)..."></textarea><div style="display:flex;gap:8px"><button onclick="saveTimerOutcome(\'complete\')" style="flex:1;padding:14px;border-radius:12px;border:none;background:var(--green);color:#fff;font-family:var(--mono);font-size:14px;font-weight:800;cursor:pointer">✅ Done</button><button onclick="saveTimerOutcome(\'partial\')" style="flex:1;padding:14px;border-radius:12px;border:1px solid var(--amber);background:var(--amber-bg);color:var(--amber);font-family:var(--mono);font-size:12px;font-weight:700;cursor:pointer">⚡ Partial</button><button onclick="closeTimerFollowup()" style="flex:1;padding:14px;border-radius:12px;border:1px solid var(--border);background:var(--bg3);color:var(--dim);font-family:var(--mono);font-size:12px;font-weight:700;cursor:pointer">Skip</button></div></div>';
+  pop.innerHTML='<div class="pop-backdrop" onclick="closeTimerFollowup()"></div><div class="neuro-pop" style="border-color:var(--amber)"><div class="neuro-pop-header"><span class="neuro-pop-title">⏱️ TIMER COMPLETE</span><button class="neuro-pop-close" onclick="closeTimerFollowup()">Done</button></div><div style="text-align:center;margin-bottom:12px"><div style="font-size:28px;margin-bottom:4px">✅</div><div style="font-size:16px;font-weight:700;color:var(--text)">'+(timerState.label||"Focus session")+'</div><div style="font-size:12px;color:var(--dim);font-family:var(--mono);margin-top:4px">'+durMin+' min completed</div></div><div style="font-size:11px;color:var(--amber);font-family:var(--mono);letter-spacing:1px;margin-bottom:6px;font-weight:700">HOW DID IT GO?</div><textarea id="timerOutcome" class="tit-review-val" style="min-height:60px;resize:vertical;margin-bottom:12px" placeholder="quick note (optional)..."></textarea><div style="display:flex;gap:8px"><button onclick="saveTimerOutcome(\'complete\')" style="flex:1;padding:14px;border-radius:12px;border:none;background:var(--green);color:#fff;font-family:var(--mono);font-size:14px;font-weight:800;cursor:pointer">✅ Done</button><button onclick="saveTimerOutcome(\'partial\')" style="flex:1;padding:14px;border-radius:12px;border:1px solid var(--amber);background:var(--amber-bg);color:var(--amber);font-family:var(--mono);font-size:12px;font-weight:700;cursor:pointer">⚡ Partial</button><button onclick="closeTimerFollowup()" style="flex:1;padding:14px;border-radius:12px;border:1px solid var(--border);background:var(--bg3);color:var(--dim);font-family:var(--mono);font-size:12px;font-weight:700;cursor:pointer">Skip</button></div><button onclick="closeTimerAndCapture()" style="width:100%;margin-top:8px;padding:12px;border-radius:12px;border:2px solid var(--amber);background:var(--amber-bg);color:var(--amber);font-family:var(--mono);font-size:13px;font-weight:700;cursor:pointer">🧠 Capture State</button></div>';
 }
 
 function saveTimerOutcome(status){
@@ -998,6 +1174,7 @@ function saveTimerOutcome(status){
 }
 
 function closeTimerFollowup(){document.getElementById("neuroPop").innerHTML=""}
+function closeTimerAndCapture(){closeTimerFollowup();openStateCapture("timer",null)}
 
 // ─── GEOLOCATION ───
 function captureLocation(){
@@ -1125,6 +1302,7 @@ async function submitCapture(){
     geo:captureGeo?{...captureGeo}:null,
     links:links.length?[...links]:null,
     seed:captureSeed||null,
+    neuro:window._captureNeuro||null,
     created_at:new Date().toISOString()
   };
   try{await dbPut("capture_queue",queueItem)}catch(e){}
@@ -1156,6 +1334,7 @@ async function processQueueItem(q){
     md+="created: "+q.timestamp+"\ncapture_time: "+q.capture_time+"\n";
     if(q.inner_state?.valence)md+="inner_state_valence: "+q.inner_state.valence+"\n";
     md+="inner_state_intensity: "+(q.inner_state?.intensity||5)+"\ntask_filter: "+(q.inner_state?.task_filter||"standard")+"\n";
+    if(q.neuro){const nActive=NEURO_AXES.filter(a=>(q.neuro[a.key]||5)!==5);if(nActive.length){nActive.forEach(a=>md+=a.key+": "+q.neuro[a.key]+"\n")}}
     if(q.geo)md+="capture_lat: "+q.geo.lat+"\ncapture_long: "+q.geo.long+"\ncapture_accuracy: "+q.geo.accuracy+"\ncapture_geo_timestamp: "+q.geo.timestamp+"\n";
     if(q.attachment)md+='attachment_type: '+q.attachment.type+'\nattachment_value: "'+(q.attachment.value||"").replace(/"/g,'\\"')+'"\n';
     if(q.links){md+="links:\n";q.links.forEach(l=>md+='  - "'+l.replace(/"/g,'\\"')+'"\n')}
@@ -1223,15 +1402,13 @@ function clearForm(){
   document.getElementById("capText").value="";
   innerState={valence:null,intensity:5,task_filter:"standard"};captureTime="now";attachment={type:null,value:null};captureGeo=null;
   captureSeed=null;linkCounter=1;
-  document.querySelectorAll(".is-chip").forEach(c=>c.classList.remove("active"));
-  document.getElementById("isIntVal").textContent="5";
-  document.querySelectorAll(".is-tf-chip").forEach(c=>{c.classList.remove("active");if(c.textContent==="STD")c.classList.add("active")});
   document.getElementById("timeChip").textContent="now";document.getElementById("timeChip").classList.remove("active");
   document.getElementById("attachBar").style.display="none";document.getElementById("attachBtn").classList.remove("has-val");
   document.querySelectorAll(".seed-chip").forEach(c=>c.classList.remove("active","marble-active"));
   document.getElementById("linkFields").innerHTML='<div class="link-row" id="linkRow0"><span class="link-icon">🔗</span><input class="link-input" id="linkInput0" type="url" placeholder="paste link..." oninput="checkSave()" /><button class="link-paste" onclick="pasteClipboard(0)" title="Paste from clipboard">📋</button><button class="link-add" onclick="addLinkField()">＋</button></div>';
-  const p=document.getElementById("isPanel"),t=document.getElementById("isToggle");p.classList.remove("open");t.classList.remove("open");
-  updISPreview();checkSave();captureLocation();
+  const p=document.getElementById("isToggle");if(p)p.classList.remove("open");
+  const preview=document.getElementById("isPreview");if(preview)preview.textContent="tap to capture state";
+  window._captureNeuro=null;checkSave();captureLocation();
 }
 
 // ─── INTERCEPT GATE ───
@@ -1392,19 +1569,23 @@ function renderInboxDetail(idx){
   const confPct=item.confidence?Math.round(item.confidence*100):0;
   const confColor=confPct>=80?"var(--green)":confPct>=60?"var(--amber)":"var(--red)";
   let neuroPreview="";NEURO_AXES.forEach(a=>{neuroPreview+='<span class="neuro-bar-item">'+a.emoji+'<span class="nval neutral">5</span></span>'});
-  let neuroExpand="";NEURO_AXES.forEach(a=>{neuroExpand+='<div class="neuro-row"><button class="neuro-tap minus" onclick="adjReviewNeuro(\''+a.key+'\',-1)">−</button><div class="neuro-mid"><span class="neuro-mid-emoji">'+a.emoji+'</span><span class="neuro-mid-val neutral" id="rnv_'+a.key+'">5</span></div><button class="neuro-tap plus" onclick="adjReviewNeuro(\''+a.key+'\',1)">+</button></div>'});
+  const neuroBarHtml='<div class="neuro-bar" id="reviewNeuroBar" onclick="openInboxStateCapture('+idx+')"><div class="neuro-bar-header"><span class="neuro-bar-title">🧠 STATE CAPTURE</span><span class="neuro-bar-toggle">tap to tag</span></div><div class="neuro-bar-preview" id="neuroBarPreview">'+neuroPreview+'</div></div>';
   const proposal=getAIProposal(item);
   const proposalHtml=proposal?'<div class="ai-proposal" id="aiProposalCard"><div class="ai-proposal-header"><span class="ai-proposal-title">🤖 ATLAS PROPOSAL</span><button class="ai-proposal-edit" onclick="toggleProposalEdit('+idx+')">✏️ edit</button></div><div class="ai-proposal-body" id="aiProposalBody">'+proposal.split("\n").map(l=>l.trim()).filter(l=>l).map(l=>'<div class="step"><span class="step-arrow">→</span><span>'+esc(l.replace(/^→\s*/,""))+'</span></div>').join("")+'</div></div>':"";
-  o.innerHTML='<div class="overlay-header"><div style="display:flex;align-items:center;gap:8px"><button class="overlay-close" onclick="renderInboxCard()">←</button><span class="overlay-title">'+(e?.e||"📄")+" "+esc(e?.l||item.entityType)+'</span></div><button class="overlay-close" onclick="hideOverlay(\'inbox\')">✕</button></div><div class="overlay-body" style="padding:12px">'+(confPct?'<div style="font-size:11px;color:var(--dimmer);font-family:var(--mono);margin-bottom:10px">AI confidence: <span style="color:'+confColor+';font-weight:800">'+confPct+'%</span> '+(item.reasoning?esc(item.reasoning):"")+'</div>':"")+'<div style="font-size:11px;color:var(--amber);font-family:var(--mono);letter-spacing:1px;margin-bottom:8px;font-weight:700">WORKFLOW SEED</div>'+seedHtml+'<div class="section-divider"></div>'+proposalHtml+'<div style="font-size:11px;color:var(--amber);font-family:var(--mono);letter-spacing:1px;margin-bottom:8px;font-weight:700">TIT BREAKDOWN</div><div id="titReviewFields">'+titHtml+'</div><div class="section-divider"></div><div class="neuro-bar" id="reviewNeuroBar" onclick="toggleReviewNeuroBar()"><div class="neuro-bar-header"><span class="neuro-bar-title">🧠 NEUROMARKER</span><span class="neuro-bar-toggle">▼</span></div><div class="neuro-bar-preview" id="neuroBarPreview">'+neuroPreview+'</div><div class="neuro-bar-expand" id="neuroBarExpand">'+neuroExpand+'<button class="neuro-reset-btn" onclick="event.stopPropagation();resetReviewNeuro()">reset all to 5</button></div></div><div style="font-size:11px;color:var(--dimmer);font-family:var(--mono);margin:8px 0;padding:8px 12px;background:var(--bg2);border-radius:8px">→ '+item.dest+'/'+item.filename+'</div><div style="display:flex;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)"><button onclick="detailAction('+idx+',\'approve\')" style="flex:2;padding:18px;border-radius:14px;border:none;background:var(--green);color:#fff;font-family:var(--mono);font-size:16px;font-weight:800;cursor:pointer;min-height:56px">✅ Confirm</button><button onclick="detailAction('+idx+',\'delete\')" style="flex:1;padding:18px;border-radius:14px;border:1px solid var(--border);background:var(--bg3);color:var(--red);font-family:var(--mono);font-size:14px;font-weight:700;cursor:pointer;min-height:56px">🗑️</button></div></div>';
+  o.innerHTML='<div class="overlay-header"><div style="display:flex;align-items:center;gap:8px"><button class="overlay-close" onclick="renderInboxCard()">←</button><span class="overlay-title">'+(e?.e||"📄")+" "+esc(e?.l||item.entityType)+'</span></div><button class="overlay-close" onclick="hideOverlay(\'inbox\')">✕</button></div><div class="overlay-body" style="padding:12px">'+(confPct?'<div style="font-size:11px;color:var(--dimmer);font-family:var(--mono);margin-bottom:10px">AI confidence: <span style="color:'+confColor+';font-weight:800">'+confPct+'%</span> '+(item.reasoning?esc(item.reasoning):"")+'</div>':"")+'<div style="font-size:11px;color:var(--amber);font-family:var(--mono);letter-spacing:1px;margin-bottom:8px;font-weight:700">WORKFLOW SEED</div>'+seedHtml+'<div class="section-divider"></div>'+proposalHtml+'<div style="font-size:11px;color:var(--amber);font-family:var(--mono);letter-spacing:1px;margin-bottom:8px;font-weight:700">TIT BREAKDOWN</div><div id="titReviewFields">'+titHtml+'</div><div class="section-divider"></div>'+neuroBarHtml+'<div style="font-size:11px;color:var(--dimmer);font-family:var(--mono);margin:8px 0;padding:8px 12px;background:var(--bg2);border-radius:8px">→ '+item.dest+'/'+item.filename+'</div><div style="display:flex;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)"><button onclick="detailAction('+idx+',\'approve\')" style="flex:2;padding:18px;border-radius:14px;border:none;background:var(--green);color:#fff;font-family:var(--mono);font-size:16px;font-weight:800;cursor:pointer;min-height:56px">✅ Confirm</button><button onclick="detailAction('+idx+',\'delete\')" style="flex:1;padding:18px;border-radius:14px;border:1px solid var(--border);background:var(--bg3);color:var(--red);font-family:var(--mono);font-size:14px;font-weight:700;cursor:pointer;min-height:56px">🗑️</button></div></div>';
 }
 
-function toggleReviewNeuroBar(){const bar=document.getElementById("reviewNeuroBar");bar.classList.toggle("open")}
+function openInboxStateCapture(idx){
+  openStateCapture("capture",async function(result){
+    reviewNeuro={...result.neuro};
+    updateNeuroBarPreview();
+  });
+}
 function adjReviewNeuro(key,delta){
   const v=Math.max(1,Math.min(10,(reviewNeuro[key]||5)+delta));reviewNeuro[key]=v;
-  const el=document.getElementById("rnv_"+key);if(el){el.textContent=v;el.className="neuro-mid-val "+(v>5?"pos":v<5?"neg":"neutral")}
   updateNeuroBarPreview();
 }
-function resetReviewNeuro(){NEURO_AXES.forEach(a=>{reviewNeuro[a.key]=5;const el=document.getElementById("rnv_"+a.key);if(el){el.textContent="5";el.className="neuro-mid-val neutral"}});updateNeuroBarPreview()}
+function resetReviewNeuro(){NEURO_AXES.forEach(a=>{reviewNeuro[a.key]=5});updateNeuroBarPreview()}
 function updateNeuroBarPreview(){
   const p=document.getElementById("neuroBarPreview");if(!p)return;
   p.innerHTML=NEURO_AXES.map(a=>{const v=reviewNeuro[a.key]||5;return '<span class="neuro-bar-item">'+a.emoji+'<span class="nval '+(v>5?"pos":v<5?"neg":"neutral")+'">'+v+'</span></span>'}).join("");
@@ -1686,7 +1867,7 @@ function showSettings(){
   +'<div class="sgroup"><div class="slabel">SYNC &amp; DATA</div><div style="font-size:11px;margin-bottom:4px">Vault sync: <span style="color:'+syncColor+';font-weight:700">'+syncText+'</span></div><div style="font-size:11px;color:var(--dim);margin-bottom:8px" id="bufStatsLine">Buffer: loading...</div><div style="display:flex;gap:8px"><button class="btn btn-s" style="flex:1;background:var(--amber-bg);border-color:var(--amber);color:var(--amber)" onclick="exportBuffer()">📦 Export</button><button class="btn btn-s" style="flex:1" onclick="bufferCleanExpired().then(n=>toast(n+\' expired removed\',\'success\'))">🧹 Clean</button></div></div>'
   +'<div class="sgroup"><div class="slabel">NOTIFICATIONS</div><button class="btn btn-s" style="width:100%" onclick="reqNotif()">Enable Notifications</button></div>'
   +'<div class="sgroup"><div class="slabel">AI LEARNING ('+corrections.length+' corrections)</div><div style="font-size:11px;color:var(--dim);margin-bottom:8px">ATLAS learns from your inbox edits to improve future routing.</div>'+(corrections.length?'<div style="max-height:120px;overflow-y:auto;background:var(--bg2);border-radius:8px;padding:8px;margin-bottom:8px">'+corrections.slice(0,10).map(c=>'<div style="font-size:10px;color:var(--dimmer);margin-bottom:4px">'+esc(c.field)+': "'+esc(c.from)+'" → "'+esc(c.to)+'"</div>').join("")+'</div>':"")+'<button class="btn btn-s" style="width:100%" onclick="if(confirm(\'Clear all corrections?\')){localStorage.removeItem(\'atlas-corrections\');showSettings()}">Clear Learning Data</button></div>'
-  +'<div class="sgroup"><div class="slabel">SYSTEM</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">ATLAS V12 Light · v11.5</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">Build: '+TD+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">GitHub Vault: '+(ghOk?"✅ Connected":"❌ Not connected")+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">Local Obsidian: '+(vault&&!ghOk?"✅ Connected":"⚪ Optional")+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">IndexedDB: '+(db?"✅ Ready":"❌ Not init")+'</div><div style="font-size:11px;color:var(--dimmer)">Limitless: '+(lmtKey?"✅ Key set":"❌ No key")+'</div></div></div>';
+  +'<div class="sgroup"><div class="slabel">SYSTEM</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">ATLAS V12 Light · v11.6</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">Build: '+TD+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">GitHub Vault: '+(ghOk?"✅ Connected":"❌ Not connected")+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">Local Obsidian: '+(vault&&!ghOk?"✅ Connected":"⚪ Optional")+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">IndexedDB: '+(db?"✅ Ready":"❌ Not init")+'</div><div style="font-size:11px;color:var(--dimmer)">Limitless: '+(lmtKey?"✅ Key set":"❌ No key")+'</div></div></div>';
   o.style.display="flex";
   showBufferStats();
 }
@@ -1808,7 +1989,7 @@ function drawerIntercept(){
   showInterceptGate(data);
 }
 
-function drawerNeuro(){closeDrawer();openStandaloneNeuro()}
+function drawerNeuro(){closeDrawer();openStateCapture("standalone",null)}
 
 async function drawerAction(type){
   if(type==="water"){
