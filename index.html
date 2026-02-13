@@ -859,7 +859,28 @@ function webSpeechFallback(blob){
   })
 }
 
-// ─── QUICK CAPTURE BYPASS ───
+// ─── DAILY NOTE AUTO-CREATE ───
+async function ensureDaily(){
+  if(!vault)return;
+  const path="Agenda/daily/daily_"+TD+".md";
+  try{const c=await obsR(path);if(c)return}catch(e){}
+  // Create today's daily
+  const dow=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][new Date().getDay()];
+  const isWeekend=new Date().getDay()===0||new Date().getDay()===6;
+  const md="---\ntype: daily\nlayer: jar\nstatus: active\ndate: "+TD+"\nday_of_week: "+dow+"\nis_weekend: "+isWeekend+"\ncreated: "+TD+"\nupdated: "+TD+"\ntags:\n  - \"nelos/daily\"\n  - \"v12\"\nhydration_liters: 0\ncaffeine_count: 0\ncaffeine_last_time: \"\"\nmorning_energy: \"\"\nmorning_mood: \"\"\nmorning_motivation: \"\"\nmorning_intention: \"\"\nevening_energy: \"\"\nevening_mood: \"\"\nevening_satisfaction: \"\"\nday_rating: \"\"\nday_summary: \"\"\nwins_effort: \"\"\nwins_result: \"\"\nfriction_points: \"\"\nnotes: \"\"\natlas_notes: \"\"\n---\n\n## 📋 Daily — "+dow+" "+TD+"\n\n## Morning Intention\n\n\n## Quick Captures\n\n\n## Wins\n\n\n## Friction Points\n\n\n## Evening Reflection\n\n\n## Atlas Notes\n\n";
+  try{
+    await obsW(path,md,true);
+    console.log("[ATLAS] Daily note created: "+path);
+  }catch(e){console.error("[ATLAS] Daily create failed:",e)}
+}
+
+async function ensureFolder(folder){
+  if(!vault)return;
+  const files=await obsDir(folder);
+  if(!files.length){
+    try{await obsW(folder+"/README.md","# "+folder.split("/").pop()+"\n",true);console.log("[ATLAS] Created folder: "+folder)}catch(ex){}
+  }
+}
 async function quickCapture(text){
   const clean=text.replace(/^quick\s*/i,"").trim();
   if(!clean){toast("Nothing to capture","error");return}
@@ -1500,7 +1521,7 @@ function showSettings(){
   +'<div class="sgroup"><div class="slabel">SYNC &amp; DATA</div><div style="font-size:11px;margin-bottom:4px">Vault sync: <span style="color:'+syncColor+';font-weight:700">'+syncText+'</span></div><div style="font-size:11px;color:var(--dim);margin-bottom:8px" id="bufStatsLine">Buffer: loading...</div><div style="display:flex;gap:8px"><button class="btn btn-s" style="flex:1;background:var(--amber-bg);border-color:var(--amber);color:var(--amber)" onclick="exportBuffer()">📦 Export</button><button class="btn btn-s" style="flex:1" onclick="bufferCleanExpired().then(n=>toast(n+\' expired removed\',\'success\'))">🧹 Clean</button></div></div>'
   +'<div class="sgroup"><div class="slabel">NOTIFICATIONS</div><button class="btn btn-s" style="width:100%" onclick="reqNotif()">Enable Notifications</button></div>'
   +'<div class="sgroup"><div class="slabel">AI LEARNING ('+corrections.length+' corrections)</div><div style="font-size:11px;color:var(--dim);margin-bottom:8px">ATLAS learns from your inbox edits to improve future routing.</div>'+(corrections.length?'<div style="max-height:120px;overflow-y:auto;background:var(--bg2);border-radius:8px;padding:8px;margin-bottom:8px">'+corrections.slice(0,10).map(c=>'<div style="font-size:10px;color:var(--dimmer);margin-bottom:4px">'+esc(c.field)+': "'+esc(c.from)+'" → "'+esc(c.to)+'"</div>').join("")+'</div>':"")+'<button class="btn btn-s" style="width:100%" onclick="if(confirm(\'Clear all corrections?\')){localStorage.removeItem(\'atlas-corrections\');showSettings()}">Clear Learning Data</button></div>'
-  +'<div class="sgroup"><div class="slabel">SYSTEM</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">ATLAS V12 Light · v11.3</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">Build: '+TD+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">GitHub Vault: '+(ghOk?"✅ Connected":"❌ Not connected")+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">Local Obsidian: '+(vault&&!ghOk?"✅ Connected":"⚪ Optional")+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">IndexedDB: '+(db?"✅ Ready":"❌ Not init")+'</div><div style="font-size:11px;color:var(--dimmer)">Limitless: '+(lmtKey?"✅ Key set":"❌ No key")+'</div></div></div>';
+  +'<div class="sgroup"><div class="slabel">SYSTEM</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">ATLAS V12 Light · v11.4</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">Build: '+TD+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">GitHub Vault: '+(ghOk?"✅ Connected":"❌ Not connected")+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">Local Obsidian: '+(vault&&!ghOk?"✅ Connected":"⚪ Optional")+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">IndexedDB: '+(db?"✅ Ready":"❌ Not init")+'</div><div style="font-size:11px;color:var(--dimmer)">Limitless: '+(lmtKey?"✅ Key set":"❌ No key")+'</div></div></div>';
   o.style.display="flex";
   showBufferStats();
 }
@@ -1573,7 +1594,7 @@ async function renderSatBanner(){
 
 function satAction(id){
   const t=SAT_TASKS.find(s=>s.id===id);if(!t)return;
-  if(t.entity==="daily"){document.getElementById("capText").value="Daily log for today";checkSave()}
+  if(t.entity==="daily"){ensureDaily().then(()=>{satState.tasks[id]=true;satState.xp=(satState.xp||0)+t.xp;saveSatState();renderSatBanner();toast("📋 Daily note ready!","success")})}
   else if(t.entity==="journal"){document.getElementById("capText").value="Journal: ";document.getElementById("capText").focus();checkSave()}
   else if(t.entity==="neuromarker"){openStandaloneNeuro()}
   else if(t.entity==="inbox"){showOverlay("inbox")}
@@ -1630,6 +1651,7 @@ async function drawerAction(type){
     localStorage.setItem("water-"+TD,String(count));
     updDrawerCounts();
     if(vault){
+      await ensureDaily();
       const daily="Agenda/daily/daily_"+TD+".md";
       const c=await obsR(daily).catch(()=>null);
       if(c){const updated=updateYamlField(c,"hydration_liters",String((count*0.25).toFixed(2)));await obsW(daily,updated).catch(()=>{})}
@@ -1641,6 +1663,7 @@ async function drawerAction(type){
     localStorage.setItem("coffee-"+TD,String(count));
     updDrawerCounts();
     if(vault){
+      await ensureDaily();
       const daily="Agenda/daily/daily_"+TD+".md";
       const c=await obsR(daily).catch(()=>null);
       if(c){
@@ -1664,6 +1687,14 @@ async function boot(){
   try{await initDB();console.log("[ATLAS] IndexedDB ready")}catch(e){console.error("[ATLAS] IndexedDB failed:",e)}
   await requestPersistence();
   await testV();
+  if(vault){
+    await ensureDaily();
+    await ensureFolder("Health/neuromarkers");
+    await ensureFolder("Capture/inbox");
+    await ensureFolder("Capture/captures");
+    await ensureFolder("Capture/intercepts");
+    await ensureFolder("Journals/entries");
+  }
   loadSatState();
   await renderSatBanner();
   updInboxCount();
