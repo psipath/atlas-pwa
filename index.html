@@ -308,6 +308,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);height:100dv
 </div>
 <div class="bottom-action">
   <button class="save-btn" id="saveBtn" disabled onclick="submitCapture()">💾 SAVE</button>
+  <div id="bgStatus" style="text-align:center;font-size:11px;color:var(--dim);font-family:var(--mono);margin-top:4px;min-height:16px"></div>
 </div>
 
 <script>
@@ -347,12 +348,13 @@ let db=null; // IndexedDB reference
 
 // ─── INDEXEDDB LAYER ───
 const DB_NAME="atlas-v12";
-const DB_VERSION=1;
+const DB_VERSION=2;
 const STORES={
   entities:{keyPath:"id",indices:["type","status","updated_at","name"]},
   lifelog_buffer:{keyPath:"id",indices:["timestamp","type","relevance","expires"]},
   inbox:{keyPath:"id",indices:["entityType","created_at"]},
-  sync_log:{keyPath:"id",indices:["action","timestamp"]}
+  sync_log:{keyPath:"id",indices:["action","timestamp"]},
+  capture_queue:{keyPath:"id",indices:["status","created_at"]}
 };
 function initDB(){
   return new Promise((resolve,reject)=>{
@@ -598,39 +600,49 @@ function openBufferCard(idx){
   const entityType=BUFFER_TO_ENTITY[r.type]||"insight";
   const entityInfo=ENTITIES[entityType];
   const time=r.timestamp?new Date(r.timestamp).toLocaleDateString([],{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}):"";
-  const people=r.people?.length?r.people.map(p=>'<span style="color:var(--blue);font-size:12px">@'+esc(p)+'</span>').join(" "):"";
+  const people=r.people?.length?r.people.join(", "):"";
+
+  // TIT-style breakdown
+  const titWhat=r.content||"";
+  const titWhy=r.type==="decision"?"Decision captured from conversation":r.type==="action_item"?"Action identified from conversation":r.type==="insight"?"Insight extracted from conversation":"Captured from lifelog";
+  const titWho=people;
 
   const o=document.getElementById("nowOverlay");
   o.innerHTML='<div class="overlay-header"><span class="overlay-title">🧠 BUFFER ITEM</span><div style="display:flex;gap:8px"><button class="overlay-close" onclick="showBuffer()">☰</button><button class="overlay-close" onclick="hideOverlay(\'now\')">✕</button></div></div><div class="overlay-body" style="padding:12px">'
-    +'<div style="background:var(--bg2);border:2px solid var(--border);border-radius:16px;padding:20px">'
     +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><span style="font-size:24px">'+icon+'</span><span style="font-family:var(--mono);font-size:14px;font-weight:800;color:var(--amber);letter-spacing:1px;text-transform:uppercase">'+esc(r.type)+'</span><span style="margin-left:auto;font-size:10px;color:var(--dimmer)">'+time+'</span></div>'
-    +'<div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:10px;line-height:1.4">'+esc(r.content)+'</div>'
-    +(r.original_quote?'<div style="font-size:13px;color:var(--dim);font-style:italic;border-left:2px solid var(--amber);padding-left:10px;margin-bottom:10px">"'+esc(r.original_quote)+'"</div>':'')
-    +(people?'<div style="margin-bottom:10px">'+people+'</div>':'')
-    +'<div style="display:flex;gap:8px;margin-bottom:8px"><span style="font-size:11px;color:var(--dimmer);font-family:var(--mono)">relevance: '+r.relevance+'/10</span></div>'
-    +'<div style="font-size:11px;color:var(--dim);padding:8px;background:var(--bg);border-radius:8px;margin-bottom:12px">Will capture as: '+(entityInfo?.e||"📄")+' <strong>'+esc(entityInfo?.l||entityType)+'</strong> → '+esc(entityInfo?.dest||"Capture/inbox")+'</div>'
-    +'</div>'
+    +(r.original_quote?'<div style="font-size:13px;color:var(--dim);font-style:italic;border-left:2px solid var(--amber);padding-left:10px;margin-bottom:12px">"'+esc(r.original_quote)+'"</div>':'')
+    +'<div style="font-size:11px;color:var(--amber);font-family:var(--mono);letter-spacing:1px;margin-bottom:8px;font-weight:700">EDIT BEFORE CAPTURE</div>'
+    +'<div style="margin-bottom:8px"><label style="font-size:11px;color:var(--dim);font-family:var(--mono)">WHAT</label><textarea id="bufEdit_what" style="width:100%;min-height:60px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px;color:var(--text);font-size:14px;font-family:var(--sans);resize:vertical">'+esc(titWhat)+'</textarea></div>'
+    +'<div style="margin-bottom:8px"><label style="font-size:11px;color:var(--dim);font-family:var(--mono)">WHY / CONTEXT</label><input id="bufEdit_why" style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px;color:var(--text);font-size:13px;font-family:var(--sans)" value="'+esc(titWhy)+'" /></div>'
+    +'<div style="margin-bottom:8px"><label style="font-size:11px;color:var(--dim);font-family:var(--mono)">WHO (people)</label><input id="bufEdit_who" style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px;color:var(--text);font-size:13px;font-family:var(--sans)" value="'+esc(titWho)+'" placeholder="comma separated names" /></div>'
+    +'<div style="margin-bottom:12px"><label style="font-size:11px;color:var(--dim);font-family:var(--mono)">CAPTURE AS</label><select id="bufEdit_type" style="width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px;color:var(--text);font-size:13px">'+Object.keys(ENTITIES).map(k=>'<option value="'+k+'"'+(k===entityType?' selected':'')+'>'+ENTITIES[k].e+' '+ENTITIES[k].l+'</option>').join("")+'</select></div>'
+    +'<div style="font-size:11px;color:var(--dim);padding:8px;background:var(--bg);border-radius:8px;margin-bottom:12px">→ '+(entityInfo?.dest||"Capture/inbox")+'</div>'
     +'<div style="display:flex;gap:10px;margin-top:12px">'
     +'<button onclick="bufferCapture('+idx+')" style="flex:2;padding:18px;border-radius:14px;border:none;background:var(--green);color:#fff;font-family:var(--mono);font-size:16px;font-weight:800;cursor:pointer;min-height:56px">✅ Capture</button>'
     +'<button onclick="bufferDiscard('+idx+')" style="flex:1;padding:18px;border-radius:14px;border:1px solid var(--border);background:var(--bg3);color:var(--red);font-family:var(--mono);font-size:14px;font-weight:700;cursor:pointer;min-height:56px">🗑️</button>'
     +'</div>'
-    +'<div style="text-align:center;margin-top:8px;font-size:11px;color:var(--dimmer)">Capture = create entity in inbox · Discard = remove from buffer</div>'
+    +'<div style="text-align:center;margin-top:8px;font-size:11px;color:var(--dimmer)">Edit fields above, then Capture to send to inbox</div>'
     +'</div>';
 }
 
 async function bufferCapture(idx){
   const r=bufferItems[idx];if(!r)return;
-  const entityType=BUFFER_TO_ENTITY[r.type]||"insight";
-  const e=ENTITIES[entityType];if(!e)return;
-  const fn=typeof e.fn==="function"?e.fn(r.content.slice(0,40)):e.fn;
-  const name=r.content.slice(0,80);
-  const yaml="---\ntype: "+entityType+"\nlayer: sand\nstatus: captured\nname: \""+name.replace(/"/g,"'")+"\"\ncreated: "+TD+"\nupdated: "+TD+"\ntags:\n  - nelos/"+entityType+"\n  - v12\n  - source/lifelog\nsource: lifelog\nsource_lifelog: \""+esc(r.source_lifelog||"")+"\"\nrelevance: "+r.relevance+"\n"+(r.people?.length?"people:\n"+r.people.map(p=>"  - \"[[person_"+p.toLowerCase().replace(/\s+/g,"-")+"]]\"").join("\n")+"\n":"")+"---\n\n## Intelligence\n\n"+r.content+"\n"+(r.original_quote?"\n> "+r.original_quote+"\n":"");
+  // Read edited values from form
+  const what=document.getElementById("bufEdit_what")?.value?.trim()||r.content;
+  const why=document.getElementById("bufEdit_why")?.value?.trim()||"";
+  const who=document.getElementById("bufEdit_who")?.value?.trim()||"";
+  const selType=document.getElementById("bufEdit_type")?.value||BUFFER_TO_ENTITY[r.type]||"insight";
+  const e=ENTITIES[selType];if(!e)return;
+  const fn=typeof e.fn==="function"?e.fn(what.slice(0,40)):e.fn;
+  const name=what.slice(0,80);
+  const peopleArr=who?who.split(",").map(p=>p.trim()).filter(Boolean):r.people||[];
+  const yaml="---\ntype: "+selType+"\nlayer: sand\nstatus: captured\nname: \""+name.replace(/"/g,"'")+"\"\ncreated: "+TD+"\nupdated: "+TD+"\ntags:\n  - nelos/"+selType+"\n  - v12\n  - source/lifelog\nsource: lifelog\nsource_lifelog: \""+esc(r.source_lifelog||"")+"\"\nrelevance: "+r.relevance+"\n"+(peopleArr.length?"people:\n"+peopleArr.map(p=>"  - \"[[person_"+p.toLowerCase().replace(/\s+/g,"-")+"]]\"").join("\n")+"\n":"")+"---\n\n## Intelligence\n\n"+what+"\n"+(why?"\n**Context:** "+why+"\n":"")+(r.original_quote?"\n> "+r.original_quote+"\n":"");
   try{
     await obsW("Capture/inbox/"+fn,yaml,true);
     bufferProcessed.add(r.id);
     await dbDelete("lifelog_buffer",r.id);
     toast("✅ Captured as "+e.l,"success");
-    onEntityCaptured(entityType);
+    onEntityCaptured(selType);
     bufferItems.splice(idx,1);
     if(bufferItems.length)showBuffer();else{toast("🧠 Buffer clear!","success");hideOverlay("now")}
   }catch(err){toast("Failed: "+err.message,"error")}
@@ -1074,35 +1086,66 @@ function buildEntityPrompt(ek,titData,extract){
 async function submitCapture(){
   const text=document.getElementById("capText").value.trim();const links=getLinks();if((!text&&!links.length)||processing)return;
   processing=true;checkSave();
-  const btn=document.getElementById("saveBtn");btn.innerHTML='<span class="spinner"></span> Processing...';
+  const btn=document.getElementById("saveBtn");
   captureLocation();
   const inputText=text||(links.length?"Link capture: "+links.join(", "):"");
+  const ts=resolveTime();
+  const capId="cap_"+Date.now()+"_"+NS();
+
+  // INSTANT SAVE — queue to IndexedDB immediately
+  const queueItem={
+    id:capId,
+    status:"pending",
+    text:inputText,
+    inner_state:{...innerState},
+    capture_time:captureTime,
+    timestamp:ts,
+    attachment:attachment.type?{...attachment}:null,
+    geo:captureGeo?{...captureGeo}:null,
+    links:links.length?[...links]:null,
+    seed:captureSeed||null,
+    created_at:new Date().toISOString()
+  };
+  try{await dbPut("capture_queue",queueItem)}catch(e){}
+
+  // INSTANT FEEDBACK — clear and confirm
+  clearForm();
+  toast("✅ Captured — processing...","success");
+  btn.textContent="💾 SAVE";
+  processing=false;checkSave();
+
+  // BACKGROUND PROCESSING — don't block the user
+  processQueueItem(queueItem).catch(e=>console.error("[ATLAS] Background process failed:",e));
+}
+
+async function processQueueItem(q){
+  const bgEl=document.getElementById("bgStatus");
   try{
-    const ts=resolveTime();
-    const capTs=new Date().toISOString().replace(/[-:T]/g,"").split(".")[0];
+    if(bgEl)bgEl.textContent="⏳ processing in background...";
+    const capTs=new Date(q.created_at).toISOString().replace(/[-:T]/g,"").split(".")[0];
     const capFile="capture_"+TD+"_"+capTs.slice(-6)+".md";
-    const input=JSON.stringify({text:inputText,inner_state:innerState,capture_time:captureTime,timestamp:ts,attachment:attachment.type?attachment:null,geo:captureGeo,links:links.length?links:undefined,seed:captureSeed||undefined},null,2);
+    const input=JSON.stringify({text:q.text,inner_state:q.inner_state,capture_time:q.capture_time,timestamp:q.timestamp,attachment:q.attachment,geo:q.geo,links:q.links,seed:q.seed},null,2);
     const resp=await claude(input,ROUTER_SYS);
     let parsed;
     try{parsed=JSON.parse(resp.replace(/^```(?:json)?\n?/gm,"").replace(/\n?```$/gm,"").trim())}catch(e){throw new Error("Router parse failed")}
     const tits=parsed.tits||{};
     const intent=parsed.source_intent||"thought";
     let md="---\ntype: capture\nstatus: inbox\nsource: manual\nsource_type: created\nsource_from: pwa_capture\nsource_intent: "+intent+"\n";
-    if(captureSeed)md+="workflow_seed: "+captureSeed+"\n";
-    md+="created: "+ts+"\ncapture_time: "+captureTime+"\n";
-    if(innerState.valence)md+="inner_state_valence: "+innerState.valence+"\n";
-    md+="inner_state_intensity: "+innerState.intensity+"\ntask_filter: "+innerState.task_filter+"\n";
-    if(captureGeo)md+="capture_lat: "+captureGeo.lat+"\ncapture_long: "+captureGeo.long+"\ncapture_accuracy: "+captureGeo.accuracy+"\ncapture_geo_timestamp: "+captureGeo.timestamp+"\n";
-    if(attachment.type)md+='attachment_type: '+attachment.type+'\nattachment_value: "'+(attachment.value||"").replace(/"/g,'\\"')+'"\n';
-    if(links.length){md+="links:\n";links.forEach(l=>md+='  - "'+l.replace(/"/g,'\\"')+'"\n')}
+    if(q.seed)md+="workflow_seed: "+q.seed+"\n";
+    md+="created: "+q.timestamp+"\ncapture_time: "+q.capture_time+"\n";
+    if(q.inner_state?.valence)md+="inner_state_valence: "+q.inner_state.valence+"\n";
+    md+="inner_state_intensity: "+(q.inner_state?.intensity||5)+"\ntask_filter: "+(q.inner_state?.task_filter||"standard")+"\n";
+    if(q.geo)md+="capture_lat: "+q.geo.lat+"\ncapture_long: "+q.geo.long+"\ncapture_accuracy: "+q.geo.accuracy+"\ncapture_geo_timestamp: "+q.geo.timestamp+"\n";
+    if(q.attachment)md+='attachment_type: '+q.attachment.type+'\nattachment_value: "'+(q.attachment.value||"").replace(/"/g,'\\"')+'"\n';
+    if(q.links){md+="links:\n";q.links.forEach(l=>md+='  - "'+l.replace(/"/g,'\\"')+'"\n')}
     for(const[k,v]of Object.entries(tits))md+='tit_'+k+': "'+String(v).replace(/"/g,'\\"')+'"\n';
-    md+="---\n\n## Raw Capture\n"+(text||inputText)+"\n\n## TIT Decomposition\n";
+    md+="---\n\n## Raw Capture\n"+q.text+"\n\n## TIT Decomposition\n";
     for(const[k,v]of Object.entries(tits))md+="- **"+(TIT_LABELS[k]||k).toUpperCase()+":** "+v+"\n";
     md+="\n## Source Intent\n"+(INTENT_LABELS[intent]||intent)+"\n";
-    if(captureSeed)md+="\n## Workflow Seed\n"+(SEED_TYPES[captureSeed]?.emoji||"")+" "+(SEED_TYPES[captureSeed]?.name||captureSeed)+"\n";
-    if(links.length)md+="\n## Links\n"+links.map(l=>"- "+l).join("\n")+"\n";
-    if(captureGeo)md+="\n## Location\n📍 "+captureGeo.lat.toFixed(5)+", "+captureGeo.long.toFixed(5)+" (±"+captureGeo.accuracy+"m)\n";
-    if(attachment.type)md+="\n## Attachment\n"+attachment.type+": "+attachment.value+"\n";
+    if(q.seed)md+="\n## Workflow Seed\n"+(SEED_TYPES[q.seed]?.emoji||"")+" "+(SEED_TYPES[q.seed]?.name||q.seed)+"\n";
+    if(q.links)md+="\n## Links\n"+q.links.map(l=>"- "+l).join("\n")+"\n";
+    if(q.geo)md+="\n## Location\n📍 "+q.geo.lat.toFixed(5)+", "+q.geo.long.toFixed(5)+" (±"+q.geo.accuracy+"m)\n";
+    if(q.attachment)md+="\n## Attachment\n"+q.attachment.type+": "+q.attachment.value+"\n";
     if(!parsed.entities?.length)throw new Error("No entities detected.");
     const entities=[];
     for(const det of parsed.entities){
@@ -1113,24 +1156,43 @@ async function submitCapture(){
       const name=(raw.match(/name:\s*"?(.+?)"?\s*$/m)||raw.match(/item_name:\s*"?(.+?)"?\s*$/m)||raw.match(/specific_item:\s*"?(.+?)"?\s*$/m)||["",det.extract])[1];
       const fn=typeof e.fn==="function"?e.fn(name):e.fn;
       let geoYaml="";
-      if(captureGeo)geoYaml="\ncapture_lat: "+captureGeo.lat+"\ncapture_long: "+captureGeo.long+"\ncapture_accuracy: "+captureGeo.accuracy;
+      if(q.geo)geoYaml="\ncapture_lat: "+q.geo.lat+"\ncapture_long: "+q.geo.long+"\ncapture_accuracy: "+q.geo.accuracy;
       let seedYaml="";
-      if(captureSeed)seedYaml="\nworkflow_seed: "+captureSeed;
+      if(q.seed)seedYaml="\nworkflow_seed: "+q.seed;
       let linksYaml="";
-      if(links.length){linksYaml="\nlinks:";links.forEach(l=>linksYaml+='\n  - "'+l.replace(/"/g,'\\"')+'"')}
-      const inboxMeta="\n<!-- ATLAS_META\ntits: "+JSON.stringify(tits)+"\nsource_intent: "+intent+"\nworkflow_seed: "+(captureSeed||"none")+"\nrouting_confidence: "+det.confidence+"\nrouting_reasoning: "+det.reasoning+"\ncapture_file: "+capFile+"\n-->";
+      if(q.links){linksYaml="\nlinks:";q.links.forEach(l=>linksYaml+='\n  - "'+l.replace(/"/g,'\\"')+'"')}
+      const inboxMeta="\n<!-- ATLAS_META\ntits: "+JSON.stringify(tits)+"\nsource_intent: "+intent+"\nworkflow_seed: "+(q.seed||"none")+"\nrouting_confidence: "+det.confidence+"\nrouting_reasoning: "+det.reasoning+"\ncapture_file: "+capFile+"\n-->";
       let fullContent=raw;
       if(geoYaml||seedYaml||linksYaml){const parts=fullContent.split("---");if(parts.length>=3){parts[1]=parts[1].trimEnd()+geoYaml+seedYaml+linksYaml+"\n";fullContent=parts.join("---")}}
       fullContent+=inboxMeta;
-      entities.push({entityType:ek,name:name,filename:fn,fullContent:fullContent,tits:tits,intent:intent,seed:captureSeed,links:links,confidence:det.confidence,reasoning:det.reasoning});
-      if(ek==="intercept"){showInterceptGate(entities[entities.length-1]);clearForm();for(const other of entities.filter(x=>x.entityType!=="intercept"))await commitSingle(other);md+="\n## Created Entities\n"+entities.filter(x=>x.entityType!=="intercept").map(x=>"- [["+x.filename.replace(".md","")+"]]").join("\n")+"\n- _Intercept pending..._\n";if(vault)await obsW("Capture/captures/"+capFile,md,true);processing=false;checkSave();btn.textContent="💾 SAVE";return}
+      entities.push({entityType:ek,name:name,filename:fn,fullContent:fullContent,tits:tits,intent:intent,seed:q.seed,links:q.links,confidence:det.confidence,reasoning:det.reasoning});
+      if(ek==="intercept"){showInterceptGate(entities[entities.length-1]);for(const other of entities.filter(x=>x.entityType!=="intercept"))await commitSingle(other);md+="\n## Created Entities\n"+entities.filter(x=>x.entityType!=="intercept").map(x=>"- [["+x.filename.replace(".md","")+"]]").join("\n")+"\n- _Intercept pending..._\n";if(vault)await obsW("Capture/captures/"+capFile,md,true);q.status="synced";try{await dbPut("capture_queue",q)}catch(e){}if(bgEl)bgEl.textContent="";updInboxCount();renderSatBanner();return}
     }
     await commitToInbox(entities);
     md+="\n## Created Entities\n"+entities.map(x=>"- [["+x.filename.replace(".md","")+"]]").join("\n")+"\n";
     if(vault)await obsW("Capture/captures/"+capFile,md,true);
-    clearForm();
-  }catch(e){toast(e.message,"error")}
-  processing=false;checkSave();btn.textContent="💾 SAVE";updInboxCount();renderSatBanner();
+    q.status="synced";
+    try{await dbPut("capture_queue",q)}catch(e){}
+    if(bgEl)bgEl.textContent="";
+    updInboxCount();renderSatBanner();
+  }catch(e){
+    console.error("[ATLAS] Process failed:",e);
+    q.status="failed";q.error=e.message;
+    try{await dbPut("capture_queue",q)}catch(ex){}
+    if(bgEl)bgEl.textContent="⚠️ sync failed — will retry on next open";
+    toast("⚠️ Background save failed — will retry","error");
+  }
+}
+
+async function retryPendingCaptures(){
+  if(!db)return;
+  try{
+    const all=await dbGetAll("capture_queue");
+    const pending=all.filter(q=>q.status==="pending"||q.status==="failed");
+    if(!pending.length)return;
+    toast("📤 Syncing "+pending.length+" pending capture"+(pending.length>1?"s":"")+"...","success");
+    for(const q of pending){await processQueueItem(q)}
+  }catch(e){console.error("[ATLAS] Retry failed:",e)}
 }
 
 async function commitSingle(item){try{if(vault)await obsW("Capture/inbox/"+item.filename,item.fullContent,true);onEntityCaptured(item.entityType);logCapture(item.entityType,item.name)}catch(e){toast("Write failed: "+item.filename,"error")}}
@@ -1609,6 +1671,7 @@ async function boot(){
   captureLocation();
   setupMicButton();
   if(db)bufferCleanExpired();
+  if(db&&vault)setTimeout(()=>retryPendingCaptures(),3000);
   if("Notification" in window&&Notification.permission==="default")setTimeout(()=>Notification.requestPermission(),5000);
 }
 boot();
