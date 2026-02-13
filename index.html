@@ -1455,53 +1455,218 @@ async function detailAction(idx,action){
   inboxUndoStack.push({idx:idx,action:action,item:item});onEntityCaptured(item.entityType);updInboxCount();renderInboxCard();
 }
 
-// ─── NOW SCREEN ───
+// ─── NOW SCREEN (3-ZONE COCKPIT) ───
 async function loadNow(){
   const o=document.getElementById("nowOverlay");
-  o.innerHTML='<div class="overlay-header"><span class="overlay-title">📡 NOW</span><button class="overlay-close" onclick="hideOverlay(\'now\')">✕</button></div><div class="overlay-body"><div class="now-loading">Scanning vault...</div></div>';
+  o.innerHTML='<div class="overlay-header"><span class="overlay-title">📡 NOW</span><div style="display:flex;gap:8px"><button class="overlay-close" onclick="showBuffer()">🧠</button><button class="overlay-close" onclick="hideOverlay(\'now\')">✕</button></div></div><div class="overlay-body"><div class="now-loading">Reading your day...</div></div>';
   o.style.display="flex";
   if(!vault){o.querySelector(".overlay-body").innerHTML='<div class="now-empty">Vault offline — connect in Settings</div>';return}
   try{
+    // ── GATHER DATA ──
     const hour=new Date().getHours();
-    let energy="🌅",period="MORNING",advice="Fresh energy — tackle hard things first";
-    if(hour>=12&&hour<17){energy="☀️";period="AFTERNOON";advice="Steady state — process & create"}
-    else if(hour>=17&&hour<21){energy="🌆";period="EVENING";advice="Winding down — review & plan"}
-    else if(hour>=21||hour<5){energy="🌙";period="NIGHT";advice="Rest mode — capture only"}
-    else if(hour>=5&&hour<8){energy="🌅";period="EARLY";advice="Prime time — set intentions"}
+    const dow=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][new Date().getDay()];
+    const shortDow=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][new Date().getDay()];
 
+    // Energy period
+    let energy="🌅",period="MORNING",advice="Fresh energy — tackle the hard thing",mindset="execution";
+    if(hour>=5&&hour<8){energy="🌅";period="EARLY MORNING";advice="Prime time — set your intention";mindset="deliberation"}
+    else if(hour>=8&&hour<12){energy="☀️";period="MORNING";advice="Peak focus — deep work now";mindset="execution"}
+    else if(hour>=12&&hour<14){energy="🌤️";period="MIDDAY";advice="Energy dip incoming — eat, move, recharge";mindset="deliberation"}
+    else if(hour>=14&&hour<17){energy="☀️";period="AFTERNOON";advice="Second wind — process & create";mindset="execution"}
+    else if(hour>=17&&hour<20){energy="🌆";period="EVENING";advice="Winding down — review & reflect";mindset="deliberation"}
+    else if(hour>=20||hour<5){energy="🌙";period="NIGHT";advice="Rest mode — capture only if needed";mindset="respite"}
+
+    // Read daily note
+    let daily=null,intention="",priorities=[],dayRating="";
+    try{
+      const dc=await obsR("Agenda/daily/daily_"+TD+".md");
+      if(dc){daily=parseYaml(dc);intention=daily.morning_intention||"";dayRating=daily.day_rating||"";
+        if(daily.top_3_priorities){if(typeof daily.top_3_priorities==="string")priorities=daily.top_3_priorities.split(",").map(s=>s.trim()).filter(Boolean);else if(Array.isArray(daily.top_3_priorities))priorities=daily.top_3_priorities}
+      }
+    }catch(e){}
+
+    // Hydration + caffeine from localStorage (faster than reading daily)
+    const water=parseInt(localStorage.getItem("water-"+TD)||"0");
+    const coffee=parseInt(localStorage.getItem("coffee-"+TD)||"0");
+
+    // Tasks from inbox + tasks folder
     let tasks=[];
-    try{const files=await obsDir("Capture/inbox/");
-      for(const f of files.filter(fn=>fn.startsWith("task_")&&!fn.startsWith("task_sat_")).slice(0,10)){
-        const c=await obsR("Capture/inbox/"+f);if(!c)continue;const y=parseYaml(c);
-        if(y.type==="task"&&y.status!=="complete")tasks.push({name:y.name||f,priority:y.priority||"standard",friction:y.friction||"5",file:f})
+    try{
+      const folders=["Capture/inbox/","Agenda/tasks/"];
+      for(const folder of folders){
+        const files=await obsDir(folder);
+        for(const f of files.filter(fn=>fn.startsWith("task_")&&!fn.startsWith("task_sat_")).slice(0,15)){
+          const c=await obsR(folder+f);if(!c)continue;const y=parseYaml(c);
+          if(y.type==="task"&&y.status!=="complete"&&y.status!=="cancelled")
+            tasks.push({name:y.name||f,priority:y.priority||"standard",friction:y.friction||5,deadline:y.deadline||"",file:f,folder:folder})
+        }
       }
     }catch(e){}
     const po={critical:0,high:1,standard:2,low:3};
-    tasks.sort((a,b)=>(po[a.priority]??2)-(po[b.priority]??2));
+    tasks.sort((a,b)=>(po[a.priority]??2)-(po[b.priority]??2)||(a.friction-b.friction));
 
+    // SAT progress
+    loadSatState();
+    const satDone=Object.values(satState.tasks).filter(v=>v).length;
+    const satTotal=SAT_TASKS.length;
+    const satPct=Math.round((satDone/satTotal)*100);
+
+    // Trail from capture log
     let trail=[];
     try{const caps=await obsDir("Capture/captures/");
-      const recent=caps.filter(f=>f.startsWith("capture_"+TD)).slice(-5);
+      const recent=caps.filter(f=>f.startsWith("capture_"+TD)).slice(-8);
       for(const f of recent){const c=await obsR("Capture/captures/"+f);if(!c)continue;const y=parseYaml(c);
         trail.push({type:y.source_intent||"capture",time:y.created||"",file:f})}
     }catch(e){}
 
-    let html='<div class="now-section"><div class="now-label">ENERGY STATE</div><div class="now-focus"><div class="now-focus-energy">'+energy+' '+period+'</div><div class="now-focus-area">'+advice+'</div><div class="now-focus-sub">'+new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"})+'</div></div></div>';
+    // Streak (from SAT)
+    let streakDays=0;
+    try{for(let d=1;d<=30;d++){const dt=new Date(Date.now()-d*86400000).toISOString().split("T")[0];
+      const s=JSON.parse(localStorage.getItem("sat-"+dt)||"null");
+      if(s&&Object.values(s.tasks).filter(v=>v).length>=3)streakDays++;else break}}catch(e){}
 
-    if(tasks.length){html+='<div class="now-section"><div class="now-label">ACTIVE TASKS ('+tasks.length+')</div>';
-      tasks.forEach(t=>{const pc=t.priority==="critical"||t.priority==="high"?"high":t.priority==="low"?"low":"standard";
-        html+='<div class="now-task"><div class="now-task-pri '+pc+'"></div><div class="now-task-info"><div class="now-task-name">'+esc(t.name)+'</div><div class="now-task-meta">'+esc(t.priority)+' · friction '+esc(t.friction)+'</div></div></div>'});
-      html+='</div>'}
+    // Pending captures in queue
+    let pendingCount=0;
+    try{const all=await dbGetAll("capture_queue");pendingCount=all.filter(q=>q.status==="pending"||q.status==="failed").length}catch(e){}
 
-    if(trail.length){html+='<div class="now-section"><div class="now-label">TODAY\'S TRAIL</div><div class="now-trail">';
-      const icons={save:"📎",schedule:"📅",thought:"💭",action:"⚡",transaction:"💳",reminder:"📌",capture:"📝"};
-      trail.forEach(t=>{const time=t.time?new Date(t.time).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}):"";
-        html+='<div class="now-crumb"><span class="now-crumb-type">'+(icons[t.type]||"📝")+'</span>'+esc(t.type)+(time?'<div class="now-crumb-time">'+time+'</div>':"")+'</div>'});
-      html+='</div></div>'}
+    // ── ZONE 1: WHERE AM I ──
+    let html='<div style="padding:12px">';
 
-    html+='<div class="now-section"><button class="distract-btn" onclick="hideOverlay(\'now\');drawerIntercept()">🛡️ DISTRACTED? LOG INTERCEPT</button></div>';
+    // Temporal grounding
+    html+='<div style="margin-bottom:16px">';
+    html+='<div style="display:flex;align-items:baseline;gap:8px;margin-bottom:4px"><span style="font-size:28px;font-weight:800;color:var(--text)">'+shortDow+'</span><span style="font-size:14px;color:var(--dim);font-family:var(--mono)">'+TD+'</span></div>';
+    html+='<div style="display:flex;align-items:center;gap:10px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:12px 16px">';
+    html+='<span style="font-size:28px">'+energy+'</span>';
+    html+='<div><div style="font-size:18px;font-weight:800;color:var(--amber);letter-spacing:2px">'+period+'</div>';
+    html+='<div style="font-size:13px;color:var(--dim)">'+advice+'</div></div></div>';
+
+    // Intention (if set)
+    if(intention){
+      html+='<div style="margin-top:10px;padding:10px 14px;background:rgba(251,191,36,0.06);border-left:3px solid var(--amber);border-radius:0 8px 8px 0">';
+      html+='<div style="font-size:10px;color:var(--amber);font-family:var(--mono);letter-spacing:1px;font-weight:700;margin-bottom:2px">TODAY\'S INTENTION</div>';
+      html+='<div style="font-size:14px;color:var(--text)">'+esc(intention)+'</div></div>';
+    }
+
+    // Quick stats bar
+    html+='<div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">';
+    html+='<div style="background:var(--bg2);border-radius:8px;padding:6px 10px;font-size:11px;font-family:var(--mono);color:var(--dim)">💧 '+water+'</div>';
+    html+='<div style="background:var(--bg2);border-radius:8px;padding:6px 10px;font-size:11px;font-family:var(--mono);color:var(--dim)">☕ '+coffee+'</div>';
+    if(streakDays>0)html+='<div style="background:var(--bg2);border-radius:8px;padding:6px 10px;font-size:11px;font-family:var(--mono);color:var(--green)">🔥 '+streakDays+'d streak</div>';
+    if(pendingCount>0)html+='<div style="background:var(--bg2);border-radius:8px;padding:6px 10px;font-size:11px;font-family:var(--mono);color:var(--amber)">📤 '+pendingCount+' syncing</div>';
+    html+='</div>';
+    html+='</div>';
+
+    // ── ZONE 2: ONE THING ──
+    html+='<div class="section-divider" style="margin:0 0 12px 0"></div>';
+
+    // Determine the ONE action
+    let oneAction=null,oneReason="",oneEmoji="🎯",oneColor="var(--amber)";
+
+    // Priority: streak risk > overdue task > SAT incomplete > next task > rest
+    const nextSat=SAT_TASKS.find(t=>!satState.tasks[t.id]&&!satState.skipped[t.id]);
+    if(tasks.length&&tasks[0].priority==="critical"){
+      oneAction=tasks[0].name;oneReason="Critical priority";oneEmoji="🚨";oneColor="var(--red)";
+    }else if(tasks.length&&tasks[0].deadline&&tasks[0].deadline<=TD){
+      oneAction=tasks[0].name;oneReason="Due today";oneEmoji="⏰";oneColor="var(--red)";
+    }else if(satDone<satTotal&&nextSat){
+      oneAction=nextSat.name;oneReason=nextSat.desc;oneEmoji=nextSat.emoji;oneColor="var(--amber)";
+    }else if(tasks.length){
+      oneAction=tasks[0].name;oneReason=tasks[0].priority+" priority";oneEmoji="🎯";oneColor="var(--amber)";
+    }
+
+    if(oneAction&&mindset!=="respite"){
+      html+='<div onclick="hideOverlay(\'now\')" style="cursor:pointer;background:var(--bg2);border:2px solid '+oneColor+';border-radius:16px;padding:16px 20px;margin-bottom:12px">';
+      html+='<div style="font-size:10px;color:'+oneColor+';font-family:var(--mono);letter-spacing:2px;font-weight:700;margin-bottom:6px">DO THIS NEXT</div>';
+      html+='<div style="display:flex;align-items:center;gap:12px"><span style="font-size:32px">'+oneEmoji+'</span>';
+      html+='<div><div style="font-size:18px;font-weight:700;color:var(--text);line-height:1.3">'+esc(oneAction)+'</div>';
+      html+='<div style="font-size:12px;color:var(--dim);margin-top:2px">'+esc(oneReason)+'</div></div></div></div>';
+    }else if(mindset==="respite"){
+      html+='<div style="background:var(--bg2);border:2px solid var(--border);border-radius:16px;padding:16px 20px;margin-bottom:12px;text-align:center">';
+      html+='<div style="font-size:32px;margin-bottom:6px">🌙</div>';
+      html+='<div style="font-size:16px;font-weight:700;color:var(--text)">Rest mode</div>';
+      html+='<div style="font-size:13px;color:var(--dim);margin-top:4px">Nothing required. Capture if inspired.</div></div>';
+    }else{
+      html+='<div style="background:var(--bg2);border:2px solid var(--green);border-radius:16px;padding:16px 20px;margin-bottom:12px;text-align:center">';
+      html+='<div style="font-size:32px;margin-bottom:6px">✅</div>';
+      html+='<div style="font-size:16px;font-weight:700;color:var(--green)">You\'re clear</div>';
+      html+='<div style="font-size:13px;color:var(--dim);margin-top:4px">All tasks done. Rest or tinker.</div></div>';
+    }
+
+    // Priorities (if set, show as secondary)
+    if(priorities.length){
+      html+='<div style="margin-bottom:12px">';
+      html+='<div style="font-size:10px;color:var(--amber);font-family:var(--mono);letter-spacing:1px;font-weight:700;margin-bottom:6px">TODAY\'S PRIORITIES</div>';
+      priorities.slice(0,3).forEach((p,i)=>{
+        html+='<div style="display:flex;align-items:center;gap:8px;padding:6px 0"><span style="font-size:12px;color:var(--dimmer);font-family:var(--mono);min-width:16px">'+(i+1)+'.</span><span style="font-size:14px;color:var(--text)">'+esc(p)+'</span></div>';
+      });
+      html+='</div>';
+    }
+
+    // ── ZONE 3: PROOF ──
+    html+='<div class="section-divider" style="margin:0 0 12px 0"></div>';
+
+    // SAT progress
+    html+='<div style="margin-bottom:12px">';
+    html+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">';
+    html+='<span style="font-size:10px;color:var(--amber);font-family:var(--mono);letter-spacing:1px;font-weight:700">TODAY\'S PROGRESS</span>';
+    html+='<span style="font-size:12px;color:'+(satPct>=51?"var(--green)":"var(--dim)")+';font-family:var(--mono);font-weight:700">'+satDone+'/'+satTotal+(satPct>=51?" ✓":"")+'</span></div>';
+    html+='<div style="background:var(--bg2);border-radius:6px;height:8px;overflow:hidden"><div style="background:'+(satPct>=51?"var(--green)":"var(--amber)")+';height:100%;width:'+satPct+'%;border-radius:6px;transition:width .3s"></div></div>';
+    // SAT task chips
+    html+='<div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap">';
+    SAT_TASKS.forEach(t=>{
+      const done=satState.tasks[t.id];
+      html+='<div style="font-size:18px;opacity:'+(done?'1':'0.3')+';filter:'+(done?'none':'grayscale(1)')+'" title="'+esc(t.name)+'">'+t.emoji+'</div>';
+    });
+    html+='</div></div>';
+
+    // Trail
+    if(trail.length){
+      const trailIcons={save:"📎",schedule:"📅",thought:"💭",action:"⚡",transaction:"💳",reminder:"📌",capture:"📝"};
+      html+='<div style="margin-bottom:12px">';
+      html+='<div style="font-size:10px;color:var(--amber);font-family:var(--mono);letter-spacing:1px;font-weight:700;margin-bottom:6px">TODAY\'S TRAIL</div>';
+      html+='<div style="display:flex;gap:4px;flex-wrap:wrap">';
+      trail.forEach(t=>{
+        const time=t.time?new Date(t.time).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}):"";
+        html+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:6px 8px;text-align:center;min-width:56px">';
+        html+='<div style="font-size:16px">'+(trailIcons[t.type]||"📝")+'</div>';
+        html+='<div style="font-size:10px;color:var(--dim)">'+esc(t.type)+'</div>';
+        if(time)html+='<div style="font-size:9px;color:var(--dimmer)">'+time+'</div>';
+        html+='</div>';
+      });
+      html+='</div></div>';
+    }
+
+    // Intercept (contextual, not permanent — show only afternoon+)
+    if(hour>=12){
+      html+='<div style="margin-top:8px"><button onclick="hideOverlay(\'now\');drawerIntercept()" style="width:100%;padding:12px;border-radius:12px;border:2px dashed var(--red);background:rgba(239,68,68,0.06);color:var(--red);font-family:var(--mono);font-size:13px;font-weight:700;cursor:pointer">🛡️ DISTRACTED? LOG INTERCEPT</button></div>';
+    }
+
+    // Set intention if not set
+    if(!intention&&hour<12){
+      html+='<div style="margin-top:8px"><button onclick="setMorningIntention()" style="width:100%;padding:14px;border-radius:12px;border:2px solid var(--amber);background:var(--amber-bg);color:var(--amber);font-family:var(--mono);font-size:14px;font-weight:700;cursor:pointer">☀️ SET TODAY\'S INTENTION</button></div>';
+    }
+
+    html+='</div>';
     o.querySelector(".overlay-body").innerHTML=html;
   }catch(e){o.querySelector(".overlay-body").innerHTML='<div class="now-empty">Error: '+esc(e.message)+'</div>'}
+}
+
+async function setMorningIntention(){
+  const intention=prompt("☀️ What's your ONE intention for today?");
+  if(!intention)return;
+  const priorities=prompt("📋 Top 3 priorities? (comma separated)");
+  try{
+    await ensureDaily();
+    const path="Agenda/daily/daily_"+TD+".md";
+    let c=await obsR(path);
+    if(c){
+      c=updateYamlField(c,"morning_intention",intention);
+      if(priorities)c=updateYamlField(c,"top_3_priorities",priorities);
+      await obsW(path,c);
+      toast("☀️ Intention set!","success");
+      loadNow();
+    }
+  }catch(e){toast("Failed: "+e.message,"error")}
 }
 
 // ─── SETTINGS ───
@@ -1521,7 +1686,7 @@ function showSettings(){
   +'<div class="sgroup"><div class="slabel">SYNC &amp; DATA</div><div style="font-size:11px;margin-bottom:4px">Vault sync: <span style="color:'+syncColor+';font-weight:700">'+syncText+'</span></div><div style="font-size:11px;color:var(--dim);margin-bottom:8px" id="bufStatsLine">Buffer: loading...</div><div style="display:flex;gap:8px"><button class="btn btn-s" style="flex:1;background:var(--amber-bg);border-color:var(--amber);color:var(--amber)" onclick="exportBuffer()">📦 Export</button><button class="btn btn-s" style="flex:1" onclick="bufferCleanExpired().then(n=>toast(n+\' expired removed\',\'success\'))">🧹 Clean</button></div></div>'
   +'<div class="sgroup"><div class="slabel">NOTIFICATIONS</div><button class="btn btn-s" style="width:100%" onclick="reqNotif()">Enable Notifications</button></div>'
   +'<div class="sgroup"><div class="slabel">AI LEARNING ('+corrections.length+' corrections)</div><div style="font-size:11px;color:var(--dim);margin-bottom:8px">ATLAS learns from your inbox edits to improve future routing.</div>'+(corrections.length?'<div style="max-height:120px;overflow-y:auto;background:var(--bg2);border-radius:8px;padding:8px;margin-bottom:8px">'+corrections.slice(0,10).map(c=>'<div style="font-size:10px;color:var(--dimmer);margin-bottom:4px">'+esc(c.field)+': "'+esc(c.from)+'" → "'+esc(c.to)+'"</div>').join("")+'</div>':"")+'<button class="btn btn-s" style="width:100%" onclick="if(confirm(\'Clear all corrections?\')){localStorage.removeItem(\'atlas-corrections\');showSettings()}">Clear Learning Data</button></div>'
-  +'<div class="sgroup"><div class="slabel">SYSTEM</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">ATLAS V12 Light · v11.4</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">Build: '+TD+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">GitHub Vault: '+(ghOk?"✅ Connected":"❌ Not connected")+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">Local Obsidian: '+(vault&&!ghOk?"✅ Connected":"⚪ Optional")+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">IndexedDB: '+(db?"✅ Ready":"❌ Not init")+'</div><div style="font-size:11px;color:var(--dimmer)">Limitless: '+(lmtKey?"✅ Key set":"❌ No key")+'</div></div></div>';
+  +'<div class="sgroup"><div class="slabel">SYSTEM</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">ATLAS V12 Light · v11.5</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">Build: '+TD+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">GitHub Vault: '+(ghOk?"✅ Connected":"❌ Not connected")+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">Local Obsidian: '+(vault&&!ghOk?"✅ Connected":"⚪ Optional")+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">IndexedDB: '+(db?"✅ Ready":"❌ Not init")+'</div><div style="font-size:11px;color:var(--dimmer)">Limitless: '+(lmtKey?"✅ Key set":"❌ No key")+'</div></div></div>';
   o.style.display="flex";
   showBufferStats();
 }
