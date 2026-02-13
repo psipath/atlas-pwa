@@ -340,6 +340,7 @@ let lmtKey=localStorage.getItem("lmt-key")||"";
 let ghToken=localStorage.getItem("gh-token")||"";
 let ghRepo=localStorage.getItem("gh-repo")||"psipath/nexus-vault";
 let ghOk=false;
+const ghProcessed=new Set();
 let lastSweep=localStorage.getItem("last-sweep")||"";
 let lastSync=localStorage.getItem("last-sync")||"";
 let db=null; // IndexedDB reference
@@ -543,6 +544,9 @@ async function runMine(query){
 }
 
 // ─── BUFFER VIEWER ───
+const BUFFER_TO_ENTITY={commitment:"task",decision:"insight",idea:"insight",emotion:"journal",pattern:"insight",action_item:"task",mention:"people",philosophy:"insight",insight:"insight",question:"task"};
+let bufferItems=[],bufferIdx=0,bufferProcessed=new Set();
+
 async function showBuffer(){
   const o=document.getElementById("nowOverlay");
   o.style.display="flex";
@@ -551,6 +555,8 @@ async function showBuffer(){
     const count=await dbCount("lifelog_buffer");
     const all=await dbGetAll("lifelog_buffer");
     all.sort((a,b)=>(b.relevance||0)-(a.relevance||0));
+    bufferItems=all.filter(r=>!bufferProcessed.has(r.id));
+    bufferIdx=0;
     const typeIcons={commitment:"🤝",decision:"⚖️",idea:"💡",emotion:"❤️",pattern:"🔄",action_item:"⚡",mention:"👤",philosophy:"🏛️",insight:"✨",question:"❓"};
     let html='<div style="padding:12px">';
     html+='<div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">';
@@ -558,25 +564,24 @@ async function showBuffer(){
     const coverage=lastSweep?Math.round((Date.now()-new Date(lastSweep).getTime())/(1000*60))+"m ago":"never";
     html+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;flex:1;min-width:80px;text-align:center"><div style="font-size:14px;font-weight:800;color:var(--dim)">'+coverage+'</div><div style="font-size:10px;color:var(--dim)">last sweep</div></div>';
     html+='</div>';
-    // Sweep + Mine buttons
     html+='<div style="display:flex;gap:8px;margin-bottom:16px">';
     html+='<button class="btn btn-s" style="flex:1;background:var(--amber-bg);border-color:var(--amber);color:var(--amber)" onclick="runSweep().then(()=>showBuffer())">📡 SWEEP</button>';
     html+='<button class="btn btn-s" style="flex:1" onclick="openMineSearch()">🔍 MINE</button>';
     html+='</div>';
-    // Buffer records
-    if(!all.length){html+='<div class="empty"><div style="font-size:48px;opacity:.4">📡</div><div style="margin-top:16px;font-size:14px">Buffer empty — run a sweep to pull lifelogs</div></div>'}
+    if(!bufferItems.length){html+='<div class="empty"><div style="font-size:48px;opacity:.4">📡</div><div style="margin-top:16px;font-size:14px">Buffer empty — run a sweep to pull lifelogs</div></div>'}
     else{
-      const recent=all.slice(0,30);
-      recent.forEach(r=>{
+      bufferItems.forEach((r,i)=>{
         const icon=typeIcons[r.type]||"📝";
+        const entityType=BUFFER_TO_ENTITY[r.type]||"insight";
+        const entityInfo=ENTITIES[entityType];
         const time=r.timestamp?new Date(r.timestamp).toLocaleDateString([],{month:"short",day:"numeric"})+' '+new Date(r.timestamp).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}):"";
         const people=r.people?.length?r.people.map(p=>'<span style="color:var(--blue);font-size:10px">@'+esc(p)+'</span>').join(" "):"";
-        html+='<div style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:6px">';
-        html+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span style="font-size:16px">'+icon+'</span><span style="font-size:11px;font-family:var(--mono);color:var(--amber);font-weight:700;text-transform:uppercase">'+esc(r.type)+'</span><span style="margin-left:auto;font-size:10px;color:var(--dimmer)">'+time+'</span></div>';
+        html+='<div onclick="openBufferCard('+i+')" style="background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:6px;cursor:pointer;transition:border-color .15s" ontouchstart="this.style.borderColor=\'var(--amber)\'" ontouchend="this.style.borderColor=\'var(--border)\'">';
+        html+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px"><span style="font-size:16px">'+icon+'</span><span style="font-size:11px;font-family:var(--mono);color:var(--amber);font-weight:700;text-transform:uppercase">'+esc(r.type)+'</span><span style="font-size:10px;color:var(--dim);margin-left:4px">→ '+(entityInfo?.e||"📄")+' '+esc(entityInfo?.l||entityType)+'</span><span style="margin-left:auto;font-size:10px;color:var(--dimmer)">'+time+'</span></div>';
         html+='<div style="font-size:14px;color:var(--text);line-height:1.4">'+esc(r.content)+'</div>';
         if(people)html+='<div style="margin-top:4px">'+people+'</div>';
         if(r.original_quote)html+='<div style="margin-top:4px;font-size:11px;color:var(--dim);font-style:italic;border-left:2px solid var(--border);padding-left:8px">"'+esc(r.original_quote)+'"</div>';
-        html+='<div style="display:flex;align-items:center;gap:8px;margin-top:6px"><span style="font-size:10px;color:var(--dimmer)">relevance: '+r.relevance+'/10</span></div>';
+        html+='<div style="display:flex;align-items:center;gap:8px;margin-top:6px"><span style="font-size:10px;color:var(--dimmer)">relevance: '+r.relevance+'/10</span><span style="font-size:10px;color:var(--dimmer);margin-left:auto">tap to capture →</span></div>';
         html+='</div>'
       });
       if(all.length>30)html+='<div style="text-align:center;font-size:11px;color:var(--dimmer);margin-top:8px">+'+(all.length-30)+' more records</div>'
@@ -584,6 +589,62 @@ async function showBuffer(){
     html+='</div>';
     o.querySelector(".overlay-body").innerHTML=html
   }catch(e){o.querySelector(".overlay-body").innerHTML='<div class="now-empty">Error: '+esc(e.message)+'</div>'}
+}
+
+function openBufferCard(idx){
+  const r=bufferItems[idx];if(!r)return;
+  const typeIcons={commitment:"🤝",decision:"⚖️",idea:"💡",emotion:"❤️",pattern:"🔄",action_item:"⚡",mention:"👤",philosophy:"🏛️",insight:"✨",question:"❓"};
+  const icon=typeIcons[r.type]||"📝";
+  const entityType=BUFFER_TO_ENTITY[r.type]||"insight";
+  const entityInfo=ENTITIES[entityType];
+  const time=r.timestamp?new Date(r.timestamp).toLocaleDateString([],{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"}):"";
+  const people=r.people?.length?r.people.map(p=>'<span style="color:var(--blue);font-size:12px">@'+esc(p)+'</span>').join(" "):"";
+
+  const o=document.getElementById("nowOverlay");
+  o.innerHTML='<div class="overlay-header"><span class="overlay-title">🧠 BUFFER ITEM</span><div style="display:flex;gap:8px"><button class="overlay-close" onclick="showBuffer()">☰</button><button class="overlay-close" onclick="hideOverlay(\'now\')">✕</button></div></div><div class="overlay-body" style="padding:12px">'
+    +'<div style="background:var(--bg2);border:2px solid var(--border);border-radius:16px;padding:20px">'
+    +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><span style="font-size:24px">'+icon+'</span><span style="font-family:var(--mono);font-size:14px;font-weight:800;color:var(--amber);letter-spacing:1px;text-transform:uppercase">'+esc(r.type)+'</span><span style="margin-left:auto;font-size:10px;color:var(--dimmer)">'+time+'</span></div>'
+    +'<div style="font-size:18px;font-weight:700;color:var(--text);margin-bottom:10px;line-height:1.4">'+esc(r.content)+'</div>'
+    +(r.original_quote?'<div style="font-size:13px;color:var(--dim);font-style:italic;border-left:2px solid var(--amber);padding-left:10px;margin-bottom:10px">"'+esc(r.original_quote)+'"</div>':'')
+    +(people?'<div style="margin-bottom:10px">'+people+'</div>':'')
+    +'<div style="display:flex;gap:8px;margin-bottom:8px"><span style="font-size:11px;color:var(--dimmer);font-family:var(--mono)">relevance: '+r.relevance+'/10</span></div>'
+    +'<div style="font-size:11px;color:var(--dim);padding:8px;background:var(--bg);border-radius:8px;margin-bottom:12px">Will capture as: '+(entityInfo?.e||"📄")+' <strong>'+esc(entityInfo?.l||entityType)+'</strong> → '+esc(entityInfo?.dest||"Capture/inbox")+'</div>'
+    +'</div>'
+    +'<div style="display:flex;gap:10px;margin-top:12px">'
+    +'<button onclick="bufferCapture('+idx+')" style="flex:2;padding:18px;border-radius:14px;border:none;background:var(--green);color:#fff;font-family:var(--mono);font-size:16px;font-weight:800;cursor:pointer;min-height:56px">✅ Capture</button>'
+    +'<button onclick="bufferDiscard('+idx+')" style="flex:1;padding:18px;border-radius:14px;border:1px solid var(--border);background:var(--bg3);color:var(--red);font-family:var(--mono);font-size:14px;font-weight:700;cursor:pointer;min-height:56px">🗑️</button>'
+    +'</div>'
+    +'<div style="text-align:center;margin-top:8px;font-size:11px;color:var(--dimmer)">Capture = create entity in inbox · Discard = remove from buffer</div>'
+    +'</div>';
+}
+
+async function bufferCapture(idx){
+  const r=bufferItems[idx];if(!r)return;
+  const entityType=BUFFER_TO_ENTITY[r.type]||"insight";
+  const e=ENTITIES[entityType];if(!e)return;
+  const fn=typeof e.fn==="function"?e.fn(r.content.slice(0,40)):e.fn;
+  const name=r.content.slice(0,80);
+  const yaml="---\ntype: "+entityType+"\nlayer: sand\nstatus: captured\nname: \""+name.replace(/"/g,"'")+"\"\ncreated: "+TD+"\nupdated: "+TD+"\ntags:\n  - nelos/"+entityType+"\n  - v12\n  - source/lifelog\nsource: lifelog\nsource_lifelog: \""+esc(r.source_lifelog||"")+"\"\nrelevance: "+r.relevance+"\n"+(r.people?.length?"people:\n"+r.people.map(p=>"  - \"[[person_"+p.toLowerCase().replace(/\s+/g,"-")+"]]\"").join("\n")+"\n":"")+"---\n\n## Intelligence\n\n"+r.content+"\n"+(r.original_quote?"\n> "+r.original_quote+"\n":"");
+  try{
+    await obsW("Capture/inbox/"+fn,yaml,true);
+    bufferProcessed.add(r.id);
+    await dbDelete("lifelog_buffer",r.id);
+    toast("✅ Captured as "+e.l,"success");
+    onEntityCaptured(entityType);
+    bufferItems.splice(idx,1);
+    if(bufferItems.length)showBuffer();else{toast("🧠 Buffer clear!","success");hideOverlay("now")}
+  }catch(err){toast("Failed: "+err.message,"error")}
+}
+
+async function bufferDiscard(idx){
+  const r=bufferItems[idx];if(!r)return;
+  try{
+    bufferProcessed.add(r.id);
+    await dbDelete("lifelog_buffer",r.id);
+    toast("🗑️ Discarded","success");
+    bufferItems.splice(idx,1);
+    if(bufferItems.length)showBuffer();else{toast("🧠 Buffer clear!","success");hideOverlay("now")}
+  }catch(err){toast("Failed: "+err.message,"error")}
 }
 function openMineSearch(){
   const q=prompt("🔍 Search lifelogs for:");
@@ -612,7 +673,7 @@ async function saveStandaloneNeuro(){
   let yaml="---\ntype: neuromarker\nstatus: complete\ncreated: "+NOW()+"\ndate: "+TD+"\n";
   NEURO_AXES.forEach(a=>yaml+=a.key+": "+d[a.key]+"\n");
   yaml+="tags:\n  - \"nelos/neuromarker\"\n  - \"v12\"\n---\n\n🧠 Neuro snapshot: "+active.map(([k,v])=>k+"="+v).join(", ")+"\n";
-  if(vault)try{await obsW("Health/neuromarkers/neuro_"+TD+"_"+NS()+".md",yaml);toast("🧠 Snapshot saved ("+active.length+" axes)","success")}catch(e){toast("Write failed","error")}
+  if(vault)try{await obsW("Health/neuromarkers/neuro_"+TD+"_"+NS()+".md",yaml,true);toast("🧠 Snapshot saved ("+active.length+" axes)","success")}catch(e){toast("Write failed","error")}
   else toast("🧠 Saved locally (vault offline)","success");
   closeStandaloneNeuro();onEntityCaptured("neuromarker");
 }
@@ -936,9 +997,9 @@ async function testV(){
   document.getElementById("hVault").innerHTML='<span class="dot '+(vault?"on":"off")+'"></span>'
 }
 const GH="https://api.github.com";
-async function ghW(p,c){
+async function ghW(p,c,isNew){
   const b64=btoa(unescape(encodeURIComponent(c)));let sha=null;
-  try{const r=await fetch(GH+"/repos/"+ghRepo+"/contents/"+encodeURI(p),{headers:{"Authorization":"token "+ghToken}});if(r.ok){const d=await r.json();sha=d.sha}}catch(e){}
+  if(!isNew){try{const r=await fetch(GH+"/repos/"+ghRepo+"/contents/"+encodeURI(p),{headers:{"Authorization":"token "+ghToken}});if(r.ok){const d=await r.json();sha=d.sha}}catch(e){}}
   const payload={message:"ATLAS: "+p.split("/").pop(),content:b64};if(sha)payload.sha=sha;
   const r=await fetch(GH+"/repos/"+ghRepo+"/contents/"+encodeURI(p),{method:"PUT",headers:{"Authorization":"token "+ghToken,"Content-Type":"application/json"},body:JSON.stringify(payload)});
   if(!r.ok)throw new Error("GitHub "+r.status);return true
@@ -966,7 +1027,7 @@ async function testGh(){
   else{ghOk=false;toast("❌ GitHub: "+r.status,"error")}}
   catch(e){ghOk=false;toast("❌ GitHub: "+e.message,"error")}
 }
-async function obsW(p,c){if(ghOk&&ghToken)return ghW(p,c);const r=await fetch(OBS+"/vault/"+encodeURI(p),{method:"PUT",headers:{"Authorization":"Bearer "+OBSK,"Content-Type":"text/markdown"},body:c});if(!r.ok)throw new Error("Vault "+r.status);return true}
+async function obsW(p,c,isNew){if(ghOk&&ghToken)return ghW(p,c,isNew);const r=await fetch(OBS+"/vault/"+encodeURI(p),{method:"PUT",headers:{"Authorization":"Bearer "+OBSK,"Content-Type":"text/markdown"},body:c});if(!r.ok)throw new Error("Vault "+r.status);return true}
 async function obsR(p){if(ghOk&&ghToken)return ghR(p);const r=await fetch(OBS+"/vault/"+encodeURI(p),{headers:{"Authorization":"Bearer "+OBSK,"Accept":"text/markdown"}});if(!r.ok)return null;return await r.text()}
 async function obsD(p){if(ghOk&&ghToken)return ghD(p);const r=await fetch(OBS+"/vault/"+encodeURI(p),{method:"DELETE",headers:{"Authorization":"Bearer "+OBSK}});if(!r.ok)throw new Error("Delete failed: "+r.status);return true}
 async function obsDir(f){if(ghOk&&ghToken)return ghDir(f);const r=await fetch(OBS+"/vault/"+f,{headers:{"Authorization":"Bearer "+OBSK}});if(!r.ok)return[];const d=await r.json();return d.files||[]}
@@ -1062,18 +1123,18 @@ async function submitCapture(){
       if(geoYaml||seedYaml||linksYaml){const parts=fullContent.split("---");if(parts.length>=3){parts[1]=parts[1].trimEnd()+geoYaml+seedYaml+linksYaml+"\n";fullContent=parts.join("---")}}
       fullContent+=inboxMeta;
       entities.push({entityType:ek,name:name,filename:fn,fullContent:fullContent,tits:tits,intent:intent,seed:captureSeed,links:links,confidence:det.confidence,reasoning:det.reasoning});
-      if(ek==="intercept"){showInterceptGate(entities[entities.length-1]);clearForm();for(const other of entities.filter(x=>x.entityType!=="intercept"))await commitSingle(other);md+="\n## Created Entities\n"+entities.filter(x=>x.entityType!=="intercept").map(x=>"- [["+x.filename.replace(".md","")+"]]").join("\n")+"\n- _Intercept pending..._\n";if(vault)await obsW("Capture/captures/"+capFile,md);processing=false;checkSave();btn.textContent="💾 SAVE";return}
+      if(ek==="intercept"){showInterceptGate(entities[entities.length-1]);clearForm();for(const other of entities.filter(x=>x.entityType!=="intercept"))await commitSingle(other);md+="\n## Created Entities\n"+entities.filter(x=>x.entityType!=="intercept").map(x=>"- [["+x.filename.replace(".md","")+"]]").join("\n")+"\n- _Intercept pending..._\n";if(vault)await obsW("Capture/captures/"+capFile,md,true);processing=false;checkSave();btn.textContent="💾 SAVE";return}
     }
     await commitToInbox(entities);
     md+="\n## Created Entities\n"+entities.map(x=>"- [["+x.filename.replace(".md","")+"]]").join("\n")+"\n";
-    if(vault)await obsW("Capture/captures/"+capFile,md);
+    if(vault)await obsW("Capture/captures/"+capFile,md,true);
     clearForm();
   }catch(e){toast(e.message,"error")}
   processing=false;checkSave();btn.textContent="💾 SAVE";updInboxCount();renderSatBanner();
 }
 
-async function commitSingle(item){try{if(vault)await obsW("Capture/inbox/"+item.filename,item.fullContent);onEntityCaptured(item.entityType);logCapture(item.entityType,item.name)}catch(e){toast("Write failed: "+item.filename,"error")}}
-async function commitToInbox(entities){let ok=0;for(const item of entities){try{if(vault){await obsW("Capture/inbox/"+item.filename,item.fullContent);ok++}}catch(e){toast("Write failed: "+item.filename,"error")}onEntityCaptured(item.entityType);logCapture(item.entityType,item.name)}if(ok)toast("✅ "+ok+" "+(ok===1?"note":"notes")+" → inbox","success");updInboxCount()}
+async function commitSingle(item){try{if(vault)await obsW("Capture/inbox/"+item.filename,item.fullContent,true);onEntityCaptured(item.entityType);logCapture(item.entityType,item.name)}catch(e){toast("Write failed: "+item.filename,"error")}}
+async function commitToInbox(entities){let ok=0;for(const item of entities){try{if(vault){await obsW("Capture/inbox/"+item.filename,item.fullContent,true);ok++}}catch(e){toast("Write failed: "+item.filename,"error")}onEntityCaptured(item.entityType);logCapture(item.entityType,item.name)}if(ok)toast("✅ "+ok+" "+(ok===1?"note":"notes")+" → inbox","success");updInboxCount()}
 
 function clearForm(){
   document.getElementById("capText").value="";
@@ -1106,7 +1167,7 @@ async function interceptChoice(choice){
   const parts=c.split("---");if(parts.length>=3){parts[1]=parts[1].trimEnd()+"\n"+fields+"\n";c=parts.join("---")}
   c+=choice==="power_choice"?"\n\n**Choice: ⚡ POWER** — Overrode the impulse. +15 XP.":"\n\n**Choice: 🧠 SELF** — Honored the need. No shame. Fresh start.";
   interceptPending.fullContent=c;
-  try{if(vault){await obsW("Capture/inbox/"+interceptPending.filename,c);toast("✅ Intercept saved","success")}}catch(e){toast("Vault write failed","error")}
+  try{if(vault){await obsW("Capture/inbox/"+interceptPending.filename,c,true);toast("✅ Intercept saved","success")}}catch(e){toast("Vault write failed","error")}
   interceptPending=null;document.getElementById("gateOverlay").style.display="none";
   onEntityCaptured("intercept");updInboxCount();toast(choice==="power_choice"?"⚡ POWER — +15 XP":"🧠 SELF — no shame","success");
 }
@@ -1122,7 +1183,7 @@ function showOverlay(id){
   document.getElementById(id+"Overlay").style.display="flex";
 }
 function hideOverlay(id){document.getElementById(id+"Overlay").style.display="none"}
-async function updInboxCount(){if(!vault)return;try{const files=await obsDir("Capture/inbox/");const c=files.filter(f=>f!=="README_INBOX.md"&&!f.startsWith("task_sat_")).length;const el=document.getElementById("hInbox");const n=document.getElementById("inboxNudge");if(c>0){el.textContent=c;el.style.display="inline";n.innerHTML="<b>"+c+"</b> item"+(c>1?"s":"")+" in inbox — tap to review";n.style.display="block"}else{el.style.display="none";n.style.display="none"}}catch(e){}}
+async function updInboxCount(){if(!vault)return;try{const files=await obsDir("Capture/inbox/");const c=files.filter(f=>f!=="README_INBOX.md"&&!f.startsWith("task_sat_")&&!ghProcessed.has("Capture/inbox/"+f)).length;const el=document.getElementById("hInbox");const n=document.getElementById("inboxNudge");if(c>0){el.textContent=c;el.style.display="inline";n.innerHTML="<b>"+c+"</b> item"+(c>1?"s":"")+" in inbox — tap to review";n.style.display="block"}else{el.style.display="none";n.style.display="none"}}catch(e){}}
 
 // ─── INBOX (2-speed: card swipe + list) ───
 let inboxItems=[],inboxIdx=0,inboxUndoStack=[];
@@ -1130,7 +1191,7 @@ async function loadInboxItems(){
   inboxItems=[];inboxIdx=0;if(!vault)return;
   try{const files=await obsDir("Capture/inbox/");
     for(const fname of files.filter(f=>f!=="README_INBOX.md"&&!f.startsWith("task_sat_"))){
-      const path="Capture/inbox/"+fname;const content=await obsR(path);if(!content)continue;
+      const path="Capture/inbox/"+fname;if(ghProcessed.has(path))continue;const content=await obsR(path);if(!content)continue;
       const y=parseYaml(content);if(!y.type)continue;
       const ytype=(y.type||"").toLowerCase();
       const ek=Object.keys(ENTITIES).find(k=>ENTITIES[k].tags[0]?.includes(ytype)||ytype===k)||(ytype==="purchase_actual"?"purchase":null);
@@ -1193,8 +1254,8 @@ function attachCardSwipe(){
 
 async function cardAction(action){
   const item=inboxItems[inboxIdx];if(!item||item._done)return;item._done=true;
-  if(action==="approve"){try{const np=item.dest+"/"+item.filename;console.log("[ATLAS] Approve: write→",np,"delete→",item.path);await obsW(np,item.content);if(np!==item.path){await obsD(item.path);console.log("[ATLAS] Deleted from inbox")}else{console.warn("[ATLAS] Same path, skip delete")}toast("✅ → "+item.dest+"/","success")}catch(e){item._done=false;toast("Move failed: "+e.message,"error");console.error("[ATLAS]",e);return}}
-  else if(action==="delete"){try{await obsD(item.path);toast("🗑️ Removed","success")}catch(e){item._done=false;toast("Delete failed","error");return}}
+  if(action==="approve"){try{const np=item.dest+"/"+item.filename;console.log("[ATLAS] Approve: write→",np,"delete→",item.path);await obsW(np,item.content);ghProcessed.add(item.path);if(np!==item.path){await obsD(item.path);console.log("[ATLAS] Deleted from inbox")}else{console.warn("[ATLAS] Same path, skip delete")}toast("✅ → "+item.dest+"/","success")}catch(e){item._done=false;toast("Move failed: "+e.message,"error");console.error("[ATLAS]",e);return}}
+  else if(action==="delete"){try{await obsD(item.path);ghProcessed.add(item.path);toast("🗑️ Removed","success")}catch(e){item._done=false;toast("Delete failed","error");return}}
   inboxUndoStack.push({idx:inboxIdx,action:action,item:item});onEntityCaptured(item.entityType);inboxIdx++;updInboxCount();renderInboxCard();
 }
 
@@ -1229,8 +1290,8 @@ function attachRowSwipe(idx){
 
 async function inboxListAction(idx,action){
   const item=inboxItems[idx];if(!item||item._done)return;item._done=true;
-  if(action==="approve"){try{const np=item.dest+"/"+item.filename;await obsW(np,item.content);if(np!==item.path)await obsD(item.path);toast("✅ → "+item.dest+"/","success")}catch(e){item._done=false;toast("Move failed","error");return}}
-  else if(action==="delete"){try{await obsD(item.path);toast("🗑️ Removed","success")}catch(e){item._done=false;toast("Delete failed","error");return}}
+  if(action==="approve"){try{const np=item.dest+"/"+item.filename;await obsW(np,item.content);ghProcessed.add(item.path);if(np!==item.path)await obsD(item.path);toast("✅ → "+item.dest+"/","success")}catch(e){item._done=false;toast("Move failed","error");return}}
+  else if(action==="delete"){try{await obsD(item.path);ghProcessed.add(item.path);toast("🗑️ Removed","success")}catch(e){item._done=false;toast("Delete failed","error");return}}
   inboxUndoStack.push({idx:idx,action:action,item:item});onEntityCaptured(item.entityType);updInboxCount();renderInboxList();
 }
 
@@ -1306,8 +1367,8 @@ async function detailAction(idx,action){
     const parts=item.content.split("---");if(parts.length>=3){parts[1]=parts[1].trimEnd()+nc+"\n";item.content=parts.join("---")}onEntityCaptured("neuromarker")}
   if(item.seed){const parts=item.content.split("---");if(parts.length>=3){if(!parts[1].includes("workflow_seed:")){parts[1]=parts[1].trimEnd()+"\nworkflow_seed: "+item.seed+"\n";item.content=parts.join("---")}else{item.content=item.content.replace(/workflow_seed:\s*.+/,"workflow_seed: "+item.seed)}}}
   item._done=true;
-  if(action==="approve"){try{const np=item.dest+"/"+item.filename;await obsW(np,item.content);if(np!==item.path)await obsD(item.path);toast("✅ → "+item.dest+"/","success")}catch(e){item._done=false;toast("Move failed","error");return}}
-  else if(action==="delete"){try{await obsD(item.path);toast("🗑️ Removed","success")}catch(e){item._done=false;toast("Delete failed","error");return}}
+  if(action==="approve"){try{const np=item.dest+"/"+item.filename;await obsW(np,item.content);ghProcessed.add(item.path);if(np!==item.path)await obsD(item.path);toast("✅ → "+item.dest+"/","success")}catch(e){item._done=false;toast("Move failed","error");return}}
+  else if(action==="delete"){try{await obsD(item.path);ghProcessed.add(item.path);toast("🗑️ Removed","success")}catch(e){item._done=false;toast("Delete failed","error");return}}
   inboxUndoStack.push({idx:idx,action:action,item:item});onEntityCaptured(item.entityType);updInboxCount();renderInboxCard();
 }
 
@@ -1377,7 +1438,7 @@ function showSettings(){
   +'<div class="sgroup"><div class="slabel">SYNC &amp; DATA</div><div style="font-size:11px;margin-bottom:4px">Vault sync: <span style="color:'+syncColor+';font-weight:700">'+syncText+'</span></div><div style="font-size:11px;color:var(--dim);margin-bottom:8px" id="bufStatsLine">Buffer: loading...</div><div style="display:flex;gap:8px"><button class="btn btn-s" style="flex:1;background:var(--amber-bg);border-color:var(--amber);color:var(--amber)" onclick="exportBuffer()">📦 Export</button><button class="btn btn-s" style="flex:1" onclick="bufferCleanExpired().then(n=>toast(n+\' expired removed\',\'success\'))">🧹 Clean</button></div></div>'
   +'<div class="sgroup"><div class="slabel">NOTIFICATIONS</div><button class="btn btn-s" style="width:100%" onclick="reqNotif()">Enable Notifications</button></div>'
   +'<div class="sgroup"><div class="slabel">AI LEARNING ('+corrections.length+' corrections)</div><div style="font-size:11px;color:var(--dim);margin-bottom:8px">ATLAS learns from your inbox edits to improve future routing.</div>'+(corrections.length?'<div style="max-height:120px;overflow-y:auto;background:var(--bg2);border-radius:8px;padding:8px;margin-bottom:8px">'+corrections.slice(0,10).map(c=>'<div style="font-size:10px;color:var(--dimmer);margin-bottom:4px">'+esc(c.field)+': "'+esc(c.from)+'" → "'+esc(c.to)+'"</div>').join("")+'</div>':"")+'<button class="btn btn-s" style="width:100%" onclick="if(confirm(\'Clear all corrections?\')){localStorage.removeItem(\'atlas-corrections\');showSettings()}">Clear Learning Data</button></div>'
-  +'<div class="sgroup"><div class="slabel">SYSTEM</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">ATLAS V12 Light · v11.1</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">Build: '+TD+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">GitHub Vault: '+(ghOk?"✅ Connected":"❌ Not connected")+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">Local Obsidian: '+(vault&&!ghOk?"✅ Connected":"⚪ Optional")+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">IndexedDB: '+(db?"✅ Ready":"❌ Not init")+'</div><div style="font-size:11px;color:var(--dimmer)">Limitless: '+(lmtKey?"✅ Key set":"❌ No key")+'</div></div></div>';
+  +'<div class="sgroup"><div class="slabel">SYSTEM</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">ATLAS V12 Light · v11.2</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">Build: '+TD+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">GitHub Vault: '+(ghOk?"✅ Connected":"❌ Not connected")+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">Local Obsidian: '+(vault&&!ghOk?"✅ Connected":"⚪ Optional")+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">IndexedDB: '+(db?"✅ Ready":"❌ Not init")+'</div><div style="font-size:11px;color:var(--dimmer)">Limitless: '+(lmtKey?"✅ Key set":"❌ No key")+'</div></div></div>';
   o.style.display="flex";
   showBufferStats();
 }
