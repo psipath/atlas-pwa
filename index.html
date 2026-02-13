@@ -44,17 +44,9 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);height:100dv
 .is-toggle-arrow{font-size:10px;color:var(--dimmer);transition:transform .2s}
 .is-toggle.open .is-toggle-arrow{transform:rotate(180deg)}
 .is-toggle.open{border-radius:10px 10px 0 0}
-.is-panel{display:none;background:var(--bg2);border:1px solid var(--border);border-top:none;border-radius:0 0 10px 10px;padding:10px 12px}
-.is-panel.open{display:block}
-.is-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
-.is-chip{font-size:15px;padding:10px 16px;border-radius:10px;border:1px solid var(--border);background:var(--bg3);color:var(--dim);cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:transparent}
-.is-chip.active{border-color:var(--amber);color:var(--amber);background:var(--amber-bg)}
-.is-intensity{display:flex;align-items:center;gap:6px}
-.is-intensity-val{font-family:var(--mono);font-size:15px;font-weight:800;color:var(--amber);min-width:18px;text-align:center}
+/* old IS styles removed — replaced by sc-* funnel styles */
 .is-int-btn{width:44px;height:44px;border-radius:10px;border:1px solid var(--border);background:var(--bg3);color:var(--dim);font-size:18px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center}
-.is-tf{display:flex;gap:4px;margin-left:auto}
-.is-tf-chip{font-size:9px;padding:3px 7px;border-radius:4px;border:1px solid var(--border);color:var(--dimmer);font-family:var(--mono);cursor:pointer;transition:all .12s}
-.is-tf-chip.active{border-color:var(--green);color:var(--green);background:var(--green-bg)}
+/* old IS-tf styles removed */
 .capture-area{flex:1;display:flex;flex-direction:column;gap:8px}
 .capture-text{width:100%;min-height:110px;max-height:180px;background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:14px;color:var(--text);font-family:var(--sans);font-size:16px;line-height:1.5;outline:none;resize:none;-webkit-user-select:text;user-select:text}
 .capture-text:focus{border-color:var(--amber)}
@@ -202,38 +194,50 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);height:100dv
 .ai-proposal-body .step{display:flex;gap:8px;margin-bottom:6px}
 .ai-proposal-body .step-arrow{color:var(--amber);font-weight:800;flex-shrink:0}
 .ai-proposal-textarea{width:100%;min-height:80px;background:var(--bg3);border:1px solid var(--amber);border-radius:10px;padding:12px;color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.6;outline:none;resize:vertical;-webkit-user-select:text;user-select:text}
-/* ─── UNIFIED STATE CAPTURE BOTTOM SHEET ─── */
+/* ─── UNIFIED STATE CAPTURE — FUNNEL ─── */
 .sc-sheet{position:fixed;bottom:0;left:0;right:0;max-height:85vh;overflow-y:auto;background:var(--bg);border-top:2px solid var(--amber);border-radius:20px 20px 0 0;z-index:10001;padding:0 16px 24px;animation:scSlide .25s ease-out}
 @keyframes scSlide{from{transform:translateY(100%)}to{transform:translateY(0)}}
 .sc-handle{width:40px;height:4px;background:var(--border);border-radius:4px;margin:8px auto 8px}
-.sc-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.sc-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
 .sc-title{font-family:var(--mono);font-size:14px;font-weight:700;color:var(--amber);letter-spacing:1px}
 .sc-done{padding:8px 20px;border-radius:10px;border:none;background:var(--amber);color:var(--bg);font-family:var(--mono);font-size:13px;font-weight:800;cursor:pointer}
-.sc-section{margin-bottom:14px}
-.sc-label{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--dim);letter-spacing:1.5px;margin-bottom:8px}
-.sc-valence{display:flex;gap:6px}
-.sc-val-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 4px;border-radius:12px;border:1px solid var(--border);background:var(--bg3);color:var(--dim);font-size:11px;cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:transparent}
-.sc-val-btn.active{border-color:var(--amber);color:var(--amber);background:var(--amber-bg)}
-.sc-val-btn span{font-size:10px;font-family:var(--mono)}
-.sc-intensity{display:flex;align-items:center;gap:8px;margin-top:8px}
+.sc-recents{display:flex;gap:8px;margin-bottom:14px;overflow-x:auto;padding-bottom:4px}
+.sc-recent-chip{padding:8px 14px;border-radius:20px;border:1px solid var(--border);background:var(--bg2);color:var(--text);font-size:13px;font-family:var(--mono);cursor:pointer;white-space:nowrap;transition:all .15s;-webkit-tap-highlight-color:transparent}
+.sc-recent-chip:active{transform:scale(.95);border-color:var(--amber)}
+.sc-zone-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.sc-zone{padding:20px 14px;border-radius:16px;border:1px solid var(--border);background:var(--bg2);cursor:pointer;text-align:center;transition:all .15s;-webkit-tap-highlight-color:transparent}
+.sc-zone:active{transform:scale(.97);border-color:var(--amber)}
+.sc-zone-emoji{font-size:28px;display:block;margin-bottom:4px}
+.sc-zone-name{font-size:14px;font-weight:800;color:var(--text);font-family:var(--mono)}
+.sc-zone-hint{font-size:10px;color:var(--dimmer);margin-top:2px;line-height:1.3}
+.sc-state-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sc-state-btn{padding:16px 10px;border-radius:14px;border:1px solid var(--border);background:var(--bg2);cursor:pointer;text-align:center;transition:all .15s;-webkit-tap-highlight-color:transparent}
+.sc-state-btn:active{transform:scale(.95)}
+.sc-state-btn.selected{border-color:var(--amber);background:var(--amber-bg)}
+.sc-state-emoji{font-size:24px;display:block;margin-bottom:2px}
+.sc-state-name{font-size:13px;font-weight:700;color:var(--text);font-family:var(--mono)}
+.sc-back{padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--dim);font-size:12px;font-family:var(--mono);cursor:pointer}
+.sc-section{margin-top:14px}
+.sc-label{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--dim);letter-spacing:1.5px;margin-bottom:8px;cursor:pointer}
+.sc-context-field{margin-bottom:8px}
+.sc-people-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}
+.sc-people-chip{padding:6px 12px;border-radius:16px;border:1px solid var(--border);background:var(--bg3);color:var(--dim);font-size:12px;font-family:var(--mono);cursor:pointer;transition:all .12s;-webkit-tap-highlight-color:transparent}
+.sc-people-chip.active{border-color:var(--blue);color:var(--blue);background:rgba(59,130,246,.1)}
+.sc-input{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg3);color:var(--text);font-size:14px;box-sizing:border-box}
+.sc-journal{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg3);color:var(--text);font-size:14px;min-height:56px;resize:vertical;box-sizing:border-box;font-family:inherit}
+.sc-mic{width:48px;height:48px;border-radius:12px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;margin-top:6px;-webkit-tap-highlight-color:transparent}
 .sc-adj{width:48px;height:48px;border-radius:12px;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-size:22px;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent}
-.sc-int-val{font-size:24px;font-weight:800;color:var(--amber);font-family:var(--mono);min-width:32px;text-align:center}
-.sc-tf{display:flex;gap:4px;margin-left:auto}
-.sc-tf-btn{font-size:9px;padding:4px 8px;border-radius:6px;border:1px solid var(--border);color:var(--dimmer);font-family:var(--mono);cursor:pointer;transition:all .12s;-webkit-tap-highlight-color:transparent}
-.sc-tf-btn.active{border-color:var(--green);color:var(--green);background:var(--green-bg)}
 .sc-neuro-grid{display:flex;flex-direction:column;gap:4px}
 .sc-neuro-row{display:flex;align-items:center;gap:6px}
 .sc-neuro-mid{flex:1;display:flex;align-items:center;gap:6px;padding:4px 0}
 .sc-neuro-mid span:first-child{font-size:18px}
 .sc-neuro-val{font-size:18px;font-weight:800;font-family:var(--mono);min-width:24px;text-align:center}
-.sc-neuro-val.neutral{color:var(--dimmer)}
-.sc-neuro-val.pos{color:var(--green)}
-.sc-neuro-val.neg{color:var(--red)}
+.sc-neuro-val.neutral{color:var(--dimmer)}.sc-neuro-val.pos{color:var(--green)}.sc-neuro-val.neg{color:var(--red)}
 .sc-neuro-name{font-size:12px;color:var(--dim);font-family:var(--mono)}
-.sc-ctx{max-height:0;overflow:hidden;transition:max-height .2s}
-.sc-ctx.open{max-height:120px}
-.sc-input{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:10px;background:var(--bg3);color:var(--text);font-size:14px;margin-bottom:6px;box-sizing:border-box}
-.sc-reset{width:100%;padding:10px;border:none;background:none;color:var(--dimmer);font-family:var(--mono);font-size:11px;cursor:pointer;text-align:center}
+.sc-finetune{max-height:0;overflow:hidden;transition:max-height .3s}
+.sc-finetune.open{max-height:500px}
+.sc-also-now{margin-top:12px;padding:12px;border-radius:12px;border:1px dashed var(--border);text-align:center;cursor:pointer;color:var(--dim);font-size:12px;font-family:var(--mono);transition:all .15s}
+.sc-also-now:active{border-color:var(--amber);color:var(--amber)}
 .section-divider{width:100%;height:1px;background:var(--border);margin:8px 0}
 @keyframes mic-pulse{0%,100%{box-shadow:0 0 0 0 rgba(232,72,88,0.4)}50%{box-shadow:0 0 0 8px rgba(232,72,88,0)}}
 .mic-hold-hint{position:fixed;bottom:160px;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--red);border-radius:10px;padding:8px 16px;font-size:12px;color:var(--red);font-family:var(--mono);z-index:35;animation:fi .2s}
@@ -687,79 +691,183 @@ function snReset(){}
 function closeStandaloneNeuro(){document.getElementById("neuroPop").innerHTML=""}
 async function saveStandaloneNeuro(){saveStateCapture()}
 
-// ─── UNIFIED STATE CAPTURE POPUP ───
-// One component. One pattern. One muscle memory.
-// Context: "capture","standalone","timer","morning","evening","intercept","moment"
-let _scData={valence:null,intensity:5,task_filter:"standard",neuro:{},context_who:"",context_where:""};
+// ─── UNIFIED STATE CAPTURE — FUNNEL SYSTEM ───
+// One popup. One pattern. One muscle memory.
+// 20 presets across 4 zones. 1-2 taps. 10 data points out.
+
+const SC_PRESETS={
+  // ACTIVATED
+  locked_in:{name:"Locked In",emoji:"🔥",zone:"activated",valence:"positive",intensity:8,task_filter:"full",neuro:{drive:8,mood:7,energy:8,calm:7,clarity:9,control:8,interest:9}},
+  creative:{name:"Creative",emoji:"🎨",zone:"activated",valence:"positive",intensity:7,task_filter:"full",neuro:{drive:8,mood:7,energy:7,calm:5,clarity:6,control:5,interest:9}},
+  committed:{name:"Committed",emoji:"⚔️",zone:"activated",valence:"positive",intensity:8,task_filter:"full",neuro:{drive:9,mood:6,energy:7,calm:6,clarity:8,control:8,interest:7}},
+  playful:{name:"Playful",emoji:"🎪",zone:"activated",valence:"positive",intensity:6,task_filter:"standard",neuro:{drive:6,mood:8,energy:7,calm:6,clarity:5,control:5,interest:8}},
+  recharged:{name:"Recharged",emoji:"⚡",zone:"activated",valence:"positive",intensity:7,task_filter:"full",neuro:{drive:7,mood:7,energy:8,calm:7,clarity:7,control:7,interest:7}},
+  aroused:{name:"Aroused",emoji:"🔥",zone:"activated",valence:"mixed",intensity:8,task_filter:"maintenance",neuro:{drive:9,mood:6,energy:8,calm:3,clarity:3,control:2,interest:8}},
+  // GROUNDED
+  good:{name:"Good",emoji:"😊",zone:"grounded",valence:"positive",intensity:5,task_filter:"standard",neuro:{drive:6,mood:7,energy:6,calm:7,clarity:7,control:7,interest:6}},
+  peaceful:{name:"Peaceful",emoji:"😌",zone:"grounded",valence:"positive",intensity:5,task_filter:"standard",neuro:{drive:4,mood:8,energy:5,calm:9,clarity:7,control:8,interest:5},askWhere:true},
+  grateful:{name:"Grateful",emoji:"🙏",zone:"grounded",valence:"positive",intensity:6,task_filter:"standard",neuro:{drive:5,mood:8,energy:5,calm:8,clarity:7,control:7,interest:6},journal:"What are you grateful for?"},
+  loving:{name:"Loving",emoji:"❤️",zone:"grounded",valence:"positive",intensity:7,task_filter:"standard",neuro:{drive:5,mood:9,energy:5,calm:8,clarity:6,control:7,interest:7},askWho:"Who?"},
+  hopeful:{name:"Hopeful",emoji:"🌅",zone:"grounded",valence:"positive",intensity:6,task_filter:"standard",neuro:{drive:7,mood:7,energy:6,calm:6,clarity:6,control:6,interest:7},journal:"What's giving you hope?"},
+  // UNSETTLED
+  scattered:{name:"Scattered",emoji:"🌀",zone:"unsettled",valence:"negative",intensity:7,task_filter:"maintenance",neuro:{drive:7,mood:5,energy:7,calm:3,clarity:2,control:2,interest:8}},
+  agitated:{name:"Agitated",emoji:"😤",zone:"unsettled",valence:"negative",intensity:8,task_filter:"maintenance",neuro:{drive:7,mood:3,energy:8,calm:2,clarity:4,control:3,interest:5},askWho:"Who's around?",journal:"What triggered this?"},
+  anxious:{name:"Anxious",emoji:"😰",zone:"unsettled",valence:"negative",intensity:8,task_filter:"rest",neuro:{drive:6,mood:3,energy:7,calm:1,clarity:3,control:2,interest:4},askWho:"Who's around?",journal:"What's worrying you?"},
+  wired:{name:"Wired",emoji:"⚡",zone:"unsettled",valence:"negative",intensity:8,task_filter:"maintenance",neuro:{drive:8,mood:5,energy:9,calm:2,clarity:5,control:3,interest:7}},
+  seeking:{name:"Seeking",emoji:"👥",zone:"unsettled",valence:"mixed",intensity:7,task_filter:"maintenance",neuro:{drive:7,mood:4,energy:6,calm:4,clarity:5,control:4,interest:7},askWho:"Who are you missing?",journal:"Who are you missing?"},
+  // DEPLETED
+  drained:{name:"Drained",emoji:"😴",zone:"depleted",valence:"negative",intensity:6,task_filter:"rest",neuro:{drive:2,mood:4,energy:2,calm:5,clarity:3,control:4,interest:2}},
+  brain_fog:{name:"Brain Fog",emoji:"🧊",zone:"depleted",valence:"negative",intensity:5,task_filter:"rest",neuro:{drive:3,mood:4,energy:4,calm:5,clarity:1,control:3,interest:3}},
+  numb:{name:"Numb",emoji:"😶",zone:"depleted",valence:"negative",intensity:4,task_filter:"rest",neuro:{drive:2,mood:3,energy:2,calm:5,clarity:3,control:3,interest:2},journal:"What happened?"},
+  yearning:{name:"Yearning",emoji:"🌊",zone:"depleted",valence:"mixed",intensity:7,task_filter:"maintenance",neuro:{drive:6,mood:4,energy:4,calm:4,clarity:5,control:4,interest:7},askWho:"For who/what?",journal:"What are you longing for?"}
+};
+
+const SC_ZONES=[
+  {key:"activated",emoji:"🔥",name:"ACTIVATED",hint:"energy up, something's driving me"},
+  {key:"grounded",emoji:"😌",name:"GROUNDED",hint:"balanced, feeling okay"},
+  {key:"unsettled",emoji:"🌀",name:"UNSETTLED",hint:"can't settle, something's off"},
+  {key:"depleted",emoji:"📉",name:"DEPLETED",hint:"running on empty"}
+];
+
+let _scData={preset:null,neuro:{},context_who:"",context_where:"",journal:"",timestamp:null};
 let _scCallback=null;
+let _scContext="standalone";
+let _scRecentStates=JSON.parse(localStorage.getItem("sc_recents")||"[]").slice(0,3);
+
+function _scSaveRecent(presetKey){
+  _scRecentStates=_scRecentStates.filter(k=>k!==presetKey);
+  _scRecentStates.unshift(presetKey);
+  _scRecentStates=_scRecentStates.slice(0,3);
+  try{localStorage.setItem("sc_recents",JSON.stringify(_scRecentStates))}catch(e){}
+}
 
 function openStateCapture(context,callback){
   _scCallback=callback||null;
-  _scData={valence:null,intensity:5,task_filter:"standard",neuro:{},context_who:"",context_where:""};
+  _scContext=context||"standalone";
+  _scData={preset:null,neuro:{},context_who:"",context_where:"",journal:"",timestamp:NOW()};
   NEURO_AXES.forEach(a=>_scData.neuro[a.key]=5);
 
-  const msgs={capture:"How are you right now?",standalone:"🧠 State Snapshot",timer:"How do you feel after that session?",morning:"How are you starting the day?",evening:"How are you ending the day?",intercept:"What state were you in?",moment:"Capture this moment's state"};
-  const title=msgs[context]||msgs.standalone;
+  const temporal=["inbox","lifelog","intercept"].includes(context);
+  const msgs={capture:"How are you right now?",standalone:"How are you right now?",timer:"How do you feel after that?",morning:"How are you starting the day?",evening:"How are you ending the day?",intercept:"What state triggered this?",moment:"Capture this moment",inbox:"How did this feel?",lifelog:"How did this feel?"};
 
   const pop=document.getElementById("neuroPop");
   let h='<div class="pop-backdrop" onclick="cancelStateCapture()"></div>';
-  h+='<div class="sc-sheet">';
+  h+='<div class="sc-sheet" id="scSheet">';
   h+='<div class="sc-handle"></div>';
-  h+='<div class="sc-header"><span class="sc-title">'+title+'</span><button class="sc-done" onclick="saveStateCapture()">Done</button></div>';
+  h+='<div class="sc-header"><span class="sc-title">'+(msgs[context]||msgs.standalone)+'</span><button class="sc-done" onclick="saveStateCapture()">Done</button></div>';
 
-  // Section 1: Inner State
-  h+='<div class="sc-section"><div class="sc-label">INNER STATE</div>';
-  h+='<div class="sc-valence">';
-  [{v:"positive",e:"😊"},{v:"negative",e:"😔"},{v:"neutral",e:"😐"},{v:"mixed",e:"🌀"}].forEach(o=>{
-    h+='<button class="sc-val-btn" id="sc_v_'+o.v+'" onclick="scValence(\''+o.v+'\')">'+o.e+'<span>'+o.v+'</span></button>';
-  });
-  h+='</div>';
-  h+='<div class="sc-intensity"><button class="sc-adj" onclick="scIntensity(-1)">−</button><span class="sc-int-val" id="sc_intensity">5</span><button class="sc-adj" onclick="scIntensity(1)">+</button>';
-  h+='<div class="sc-tf">';
-  ["full","standard","maintenance","rest"].forEach(t=>{
-    h+='<button class="sc-tf-btn'+(t==="standard"?" active":"")+'" onclick="scTaskFilter(this,\''+t+'\')">'+t.slice(0,4).toUpperCase()+'</button>';
-  });
-  h+='</div></div></div>';
+  // Recents row
+  if(_scRecentStates.length){
+    h+='<div class="sc-recents">';
+    _scRecentStates.forEach(k=>{const p=SC_PRESETS[k];if(p)h+='<button class="sc-recent-chip" onclick="scSelectPreset(\''+k+'\')">'+p.emoji+' '+p.name+'</button>'});
+    h+='</div>';
+  }
 
-  // Section 2: Neuromarker
-  h+='<div class="sc-section"><div class="sc-label">NEUROMARKER</div>';
-  h+='<div class="sc-neuro-grid">';
-  NEURO_AXES.forEach(a=>{
-    h+='<div class="sc-neuro-row"><button class="sc-adj" onclick="scNeuro(\''+a.key+'\',-1)">−</button>';
-    h+='<div class="sc-neuro-mid"><span>'+a.emoji+'</span><span class="sc-neuro-val neutral" id="sc_n_'+a.key+'">·</span><span class="sc-neuro-name">'+a.name+'</span></div>';
-    h+='<button class="sc-adj" onclick="scNeuro(\''+a.key+'\',1)">+</button></div>';
+  // Zone grid
+  h+='<div id="scZones">';
+  h+='<div class="sc-zone-grid">';
+  SC_ZONES.forEach(z=>{
+    h+='<div class="sc-zone" onclick="scDrillZone(\''+z.key+'\')"><span class="sc-zone-emoji">'+z.emoji+'</span><div class="sc-zone-name">'+z.name+'</div><div class="sc-zone-hint">'+z.hint+'</div></div>';
   });
   h+='</div></div>';
 
-  // Section 3: Context (optional, collapsible)
-  h+='<div class="sc-section"><div class="sc-label" onclick="document.getElementById(\'scCtx\').classList.toggle(\'open\')" style="cursor:pointer">CONTEXT <span style="font-size:10px;color:var(--dimmer)">▼ optional</span></div>';
-  h+='<div id="scCtx" class="sc-ctx">';
-  h+='<input class="sc-input" id="sc_who" placeholder="👤 With who?" oninput="_scData.context_who=this.value" />';
-  h+='<input class="sc-input" id="sc_where" placeholder="📍 Where?" oninput="_scData.context_where=this.value" />';
-  h+='</div></div>';
+  // State detail area (hidden initially)
+  h+='<div id="scStates" style="display:none"></div>';
 
-  h+='<button class="sc-reset" onclick="scReset()">reset all</button>';
+  // Post-select area (hidden initially)
+  h+='<div id="scPostSelect" style="display:none"></div>';
+
   h+='</div>';
   pop.innerHTML=h;
 }
 
-function scValence(v){
-  ["positive","negative","neutral","mixed"].forEach(x=>{
-    document.getElementById("sc_v_"+x).classList.remove("active");
+function scDrillZone(zoneKey){
+  const zone=SC_ZONES.find(z=>z.key===zoneKey);
+  const states=Object.entries(SC_PRESETS).filter(([k,p])=>p.zone===zoneKey);
+
+  document.getElementById("scZones").style.display="none";
+  const area=document.getElementById("scStates");
+
+  let h='<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><button class="sc-back" onclick="scBackToZones()">← back</button><span style="font-family:var(--mono);font-size:12px;color:var(--amber);font-weight:700;letter-spacing:1px">'+zone.emoji+' '+zone.name+'</span></div>';
+  h+='<div class="sc-state-grid">';
+  states.forEach(([k,p])=>{
+    h+='<button class="sc-state-btn" onclick="scSelectPreset(\''+k+'\')"><span class="sc-state-emoji">'+p.emoji+'</span><span class="sc-state-name">'+p.name+'</span></button>';
   });
-  if(_scData.valence===v){_scData.valence=null}
-  else{_scData.valence=v;document.getElementById("sc_v_"+v).classList.add("active")}
+  h+='</div>';
+  area.innerHTML=h;
+  area.style.display="block";
 }
 
-function scIntensity(d){
-  _scData.intensity=Math.max(1,Math.min(10,_scData.intensity+d));
-  document.getElementById("sc_intensity").textContent=_scData.intensity;
+function scBackToZones(){
+  document.getElementById("scStates").style.display="none";
+  document.getElementById("scStates").innerHTML="";
+  document.getElementById("scPostSelect").style.display="none";
+  document.getElementById("scPostSelect").innerHTML="";
+  document.getElementById("scZones").style.display="block";
+  _scData.preset=null;
 }
 
-function scTaskFilter(el,v){
-  document.querySelectorAll(".sc-tf-btn").forEach(b=>b.classList.remove("active"));
-  el.classList.add("active");
-  _scData.task_filter=v;
+function scSelectPreset(key){
+  const p=SC_PRESETS[key];if(!p)return;
+  _scData.preset=key;
+  // Copy neuro values from preset
+  NEURO_AXES.forEach(a=>_scData.neuro[a.key]=p.neuro[a.key]||5);
+
+  // Haptic feedback
+  if(navigator.vibrate)navigator.vibrate(30);
+
+  // Hide zones + state grid
+  document.getElementById("scZones").style.display="none";
+  document.getElementById("scStates").style.display="none";
+
+  // Build post-select view
+  const post=document.getElementById("scPostSelect");
+  let h='<div style="text-align:center;margin-bottom:14px"><span style="font-size:36px">'+p.emoji+'</span><div style="font-size:18px;font-weight:800;color:var(--amber);font-family:var(--mono);margin-top:4px">'+p.name+'</div><div style="font-size:11px;color:var(--dimmer);font-family:var(--mono);margin-top:2px">'+p.valence+' · intensity '+p.intensity+' · '+p.task_filter+'</div></div>';
+
+  // Conditional: Who field
+  if(p.askWho){
+    h+='<div class="sc-context-field"><div style="font-size:11px;color:var(--dim);font-family:var(--mono);font-weight:700;letter-spacing:1px;margin-bottom:6px">👤 '+p.askWho+'</div>';
+    h+='<div class="sc-people-chips" id="scPeopleChips"></div>';
+    h+='<input class="sc-input" id="sc_who" placeholder="type name..." oninput="_scData.context_who=this.value" /></div>';
+  }
+
+  // Conditional: Where field
+  if(p.askWhere){
+    h+='<div class="sc-context-field"><div style="font-size:11px;color:var(--dim);font-family:var(--mono);font-weight:700;letter-spacing:1px;margin-bottom:6px">📍 Where are you?</div>';
+    h+='<input class="sc-input" id="sc_where" placeholder="location..." oninput="_scData.context_where=this.value" /></div>';
+  }
+
+  // Conditional: Journal field
+  if(p.journal){
+    h+='<div class="sc-context-field"><div style="font-size:11px;color:var(--dim);font-family:var(--mono);font-weight:700;letter-spacing:1px;margin-bottom:6px">💭 '+p.journal+'</div>';
+    h+='<div style="display:flex;gap:8px;align-items:flex-start"><textarea class="sc-journal" id="sc_journal" placeholder="optional..." oninput="_scData.journal=this.value"></textarea>';
+    h+='<button class="sc-mic" onclick="scVoiceJournal()" title="Voice">🎤</button></div></div>';
+  }
+
+  // Fine-tune axes (collapsed)
+  h+='<div class="sc-section"><div class="sc-label" onclick="document.getElementById(\'scFineTune\').classList.toggle(\'open\')">🔧 FINE-TUNE AXES <span style="font-size:10px;color:var(--dimmer)">▼</span></div>';
+  h+='<div class="sc-finetune" id="scFineTune"><div class="sc-neuro-grid">';
+  NEURO_AXES.forEach(a=>{
+    const v=_scData.neuro[a.key];
+    h+='<div class="sc-neuro-row"><button class="sc-adj" onclick="scNeuro(\''+a.key+'\',-1)">−</button>';
+    h+='<div class="sc-neuro-mid"><span>'+a.emoji+'</span><span class="sc-neuro-val '+(v>5?"pos":v<5?"neg":"neutral")+'" id="sc_n_'+a.key+'">'+(v===5?"·":v)+'</span><span class="sc-neuro-name">'+a.name+'</span></div>';
+    h+='<button class="sc-adj" onclick="scNeuro(\''+a.key+'\',1)">+</button></div>';
+  });
+  h+='</div></div></div>';
+
+  // "Also capture NOW" for review contexts
+  if(["inbox","lifelog"].includes(_scContext)){
+    h+='<div class="sc-also-now" onclick="scAlsoNow(this)">💭 Also capture how you feel NOW reading this?</div>';
+  }
+
+  // Change zone / pick different
+  h+='<div style="text-align:center;margin-top:10px"><button class="sc-back" onclick="scBackToZones()">← pick different</button></div>';
+
+  post.innerHTML=h;
+  post.style.display="block";
+
+  // Load recent people chips if who field exists
+  if(p.askWho)scLoadPeopleChips();
 }
 
 function scNeuro(key,d){
@@ -769,34 +877,87 @@ function scNeuro(key,d){
   if(el){const v=n[key];el.textContent=v===5?"·":v;el.className="sc-neuro-val "+(v>5?"pos":v<5?"neg":"neutral")}
 }
 
-function scReset(){
-  _scData={valence:null,intensity:5,task_filter:"standard",neuro:{},context_who:"",context_where:""};
-  NEURO_AXES.forEach(a=>_scData.neuro[a.key]=5);
-  ["positive","negative","neutral","mixed"].forEach(x=>document.getElementById("sc_v_"+x)?.classList.remove("active"));
-  document.getElementById("sc_intensity").textContent="5";
-  NEURO_AXES.forEach(a=>{const el=document.getElementById("sc_n_"+a.key);if(el){el.textContent="·";el.className="sc-neuro-val neutral"}});
-  document.querySelectorAll(".sc-tf-btn").forEach(b=>b.classList.remove("active"));
-  document.querySelectorAll(".sc-tf-btn").forEach(b=>{if(b.textContent==="STAN")b.classList.add("active")});
-  if(document.getElementById("sc_who"))document.getElementById("sc_who").value="";
-  if(document.getElementById("sc_where"))document.getElementById("sc_where").value="";
+async function scLoadPeopleChips(){
+  const chips=document.getElementById("scPeopleChips");if(!chips)return;
+  // Try to load recent people from vault
+  let people=[];
+  if(vault){
+    try{
+      const list=await obsR("CRM/contacts/");
+      if(list){
+        const files=list.match(/people?_[^\n"]+\.md/g)||[];
+        people=files.slice(0,6).map(f=>f.replace(/^(person|people)_/,"").replace(/\.md$/,"").replace(/-/g," "));
+      }
+    }catch(e){}
+  }
+  people.push("Alone");
+  chips.innerHTML=people.map(p=>'<button class="sc-people-chip" onclick="scPickPerson(this,\''+esc(p)+'\')">'+esc(p)+'</button>').join("");
 }
 
-function cancelStateCapture(){document.getElementById("neuroPop").innerHTML="";_scCallback=null}
+function scPickPerson(el,name){
+  document.querySelectorAll(".sc-people-chip").forEach(c=>c.classList.remove("active"));
+  el.classList.add("active");
+  _scData.context_who=name;
+  const input=document.getElementById("sc_who");
+  if(input)input.value=name;
+}
+
+function scVoiceJournal(){
+  // Use Web Speech API for quick voice capture
+  if(!("webkitSpeechRecognition" in window||"SpeechRecognition" in window)){
+    toast("Voice not supported","error");return;
+  }
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  const rec=new SR();
+  rec.lang="en-US";rec.interimResults=false;rec.maxAlternatives=1;
+  const mic=document.querySelector(".sc-mic");
+  if(mic){mic.style.background="var(--amber)";mic.style.color="var(--bg)"}
+  toast("🎤 Listening...","success");
+  rec.onresult=function(e){
+    const text=e.results[0][0].transcript;
+    const journal=document.getElementById("sc_journal");
+    if(journal){journal.value=(journal.value?journal.value+" ":"")+text;_scData.journal=journal.value}
+    if(mic){mic.style.background="var(--bg3)";mic.style.color="var(--text)"}
+  };
+  rec.onerror=function(){
+    if(mic){mic.style.background="var(--bg3)";mic.style.color="var(--text)"}
+    toast("Voice failed","error");
+  };
+  rec.onend=function(){
+    if(mic){mic.style.background="var(--bg3)";mic.style.color="var(--text)"}
+  };
+  rec.start();
+}
+
+let _scAlsoNow=false;
+function scAlsoNow(el){
+  _scAlsoNow=!_scAlsoNow;
+  el.style.borderColor=_scAlsoNow?"var(--amber)":"var(--border)";
+  el.style.color=_scAlsoNow?"var(--amber)":"var(--dim)";
+  el.textContent=_scAlsoNow?"✅ Will also capture your current state":"💭 Also capture how you feel NOW reading this?";
+}
+
+function cancelStateCapture(){document.getElementById("neuroPop").innerHTML="";_scCallback=null;_scAlsoNow=false}
 
 async function saveStateCapture(){
-  const hasNeuro=NEURO_AXES.some(a=>_scData.neuro[a.key]!==5);
-  const hasInner=_scData.valence!==null;
-  if(!hasNeuro&&!hasInner){cancelStateCapture();toast("No state changes","error");return}
+  const p=_scData.preset?SC_PRESETS[_scData.preset]:null;
+  if(!p){cancelStateCapture();toast("Tap a feeling first","error");return}
 
-  // Build result object
+  _scSaveRecent(_scData.preset);
+
   const result={
-    valence:_scData.valence,
-    intensity:_scData.intensity,
-    task_filter:_scData.task_filter,
+    preset:_scData.preset,
+    preset_name:p.name,
+    preset_emoji:p.emoji,
+    valence:p.valence,
+    intensity:p.intensity,
+    task_filter:p.task_filter,
     neuro:{...(_scData.neuro)},
     context_who:_scData.context_who,
     context_where:_scData.context_where,
-    timestamp:NOW()
+    journal:_scData.journal,
+    timestamp:_scData.timestamp||NOW(),
+    is_historical:["inbox","lifelog","intercept"].includes(_scContext)
   };
 
   document.getElementById("neuroPop").innerHTML="";
@@ -804,72 +965,75 @@ async function saveStateCapture(){
   if(_scCallback){
     await _scCallback(result);
   }else{
-    // Default: save as standalone neuromarker to daily + vault
     await saveStateToDaily(result);
   }
-  toast("🧠 State captured","success");
+
+  // Micro-journal → create journal entity if text exists
+  if(result.journal&&vault){
+    try{
+      const jYaml="---\ntype: journal\njournal_type: reflection\nlayer: marble\nstatus: complete\nsource: state_capture\ncreated: \""+NOW()+"\"\ndate: \""+TD+"\"\nlinked_state: \""+p.emoji+" "+p.name+"\"\ntags:\n  - \"nelos/journal\"\n  - \"v12\"\n  - \"source/state-capture\"\n---\n\n"+result.journal+"\n";
+      await obsW("Journals/entries/journal_"+TD+"_"+NS()+".md",jYaml,true);
+    }catch(e){console.log("[SC] journal write error:",e)}
+  }
+
+  toast(p.emoji+" "+p.name+" captured","success");
+
+  // Also capture NOW (second popup for review contexts)
+  if(_scAlsoNow){
+    _scAlsoNow=false;
+    setTimeout(()=>openStateCapture("standalone",null),400);
+  }
 }
 
 async function saveStateToDaily(result){
-  // Write neuromarker to vault
-  if(vault){
-    const hasNeuro=NEURO_AXES.some(a=>result.neuro[a.key]!==5);
-    if(hasNeuro){
-      const hour=new Date().getHours();
-      const period=hour<12?"morning":hour<17?"midday":"evening";
-      let yaml="---\ntype: neuromarker\nlayer: jar\nstatus: captured\ncreated: \""+NOW()+"\"\nuuid: \""+TD.replace(/-/g,"")+NS()+"\"\ntags:\n  - \"nelos/neuromarker\"\n  - \"v12\"\ndate: \""+TD+"\"\nperiod: "+period+"\n";
-      NEURO_AXES.forEach(a=>yaml+=a.key+": "+result.neuro[a.key]+"\n");
-      const active=NEURO_AXES.filter(a=>result.neuro[a.key]!==5);
-      const avg=Math.round(active.reduce((s,a)=>s+result.neuro[a.key],0)/Math.max(active.length,1));
-      yaml+="composite: "+avg+"\n";
-      if(result.valence)yaml+="inner_state_valence: "+result.valence+"\ninner_state_intensity: "+result.intensity+"\n";
-      if(result.context_who)yaml+="context_who: \""+result.context_who+"\"\n";
-      if(result.context_where)yaml+="context_where: \""+result.context_where+"\"\n";
-      yaml+="---\n";
-      const fn="neuromarker_"+TD+"_"+NS()+".md";
-      await obsW("Health/neuromarkers/"+fn,yaml);
-    }
-
-    // Also update daily note neuromarker fields
-    try{
-      await ensureDaily();
-      const hour=new Date().getHours();
-      const period=hour<12?"morning":hour<17?"midday":"evening";
-      const path="Agenda/daily/daily_"+TD+".md";
-      let dc=await obsR(path);
-      if(dc&&hasNeuro){
+  if(!vault)return;
+  const hasNeuro=NEURO_AXES.some(a=>result.neuro[a.key]!==5);
+  if(hasNeuro){
+    const hour=new Date().getHours();
+    const period=hour<12?"morning":hour<17?"midday":"evening";
+    let yaml="---\ntype: neuromarker\nlayer: jar\nstatus: captured\ncreated: \""+NOW()+"\"\nuuid: \""+TD.replace(/-/g,"")+NS()+"\"\ntags:\n  - \"nelos/neuromarker\"\n  - \"v12\"\ndate: \""+TD+"\"\nperiod: "+period+"\npreset: \""+result.preset_name+"\"\n";
+    NEURO_AXES.forEach(a=>yaml+=a.key+": "+result.neuro[a.key]+"\n");
+    const active=NEURO_AXES.filter(a=>result.neuro[a.key]!==5);
+    const avg=active.length?Math.round(active.reduce((s,a)=>s+result.neuro[a.key],0)/active.length):5;
+    yaml+="composite: "+avg+"\ninner_state_valence: "+result.valence+"\ninner_state_intensity: "+result.intensity+"\ntask_filter: "+result.task_filter+"\n";
+    if(result.context_who)yaml+="context_who: \""+result.context_who+"\"\n";
+    if(result.context_where)yaml+="context_where: \""+result.context_where+"\"\n";
+    yaml+="---\n";
+    await obsW("Health/neuromarkers/neuromarker_"+TD+"_"+NS()+".md",yaml,true);
+  }
+  // Update daily note
+  try{
+    await ensureDaily();
+    const hour=new Date().getHours();
+    const period=hour<12?"morning":hour<17?"midday":"evening";
+    const path="Agenda/daily/daily_"+TD+".md";
+    let dc=await obsR(path);
+    if(dc){
+      dc=updateYamlField(dc,period+"_state","\""+result.preset_name+"\"");
+      dc=updateYamlField(dc,period+"_mood",String(result.neuro.mood||5));
+      dc=updateYamlField(dc,period+"_energy",String(result.neuro.energy||5));
+      dc=updateYamlField(dc,"task_filter","\""+result.task_filter+"\"");
+      if(hasNeuro){
         const active=NEURO_AXES.filter(a=>result.neuro[a.key]!==5);
         const vals=active.map(a=>a.key+":"+result.neuro[a.key]).join(", ");
-        dc=updateYamlField(dc,"neuromarkers_"+period,vals);
-        const avg=Math.round(active.reduce((s,a)=>s+result.neuro[a.key],0)/Math.max(active.length,1));
+        dc=updateYamlField(dc,"neuromarkers_"+period,"\""+vals+"\"");
+        const avg=active.length?Math.round(active.reduce((s,a)=>s+result.neuro[a.key],0)/active.length):5;
         dc=updateYamlField(dc,"neuromarkers_composite",String(avg));
-        if(result.valence){
-          dc=updateYamlField(dc,period+"_mood",String(result.neuro.mood||5));
-          dc=updateYamlField(dc,period+"_energy",String(result.neuro.energy||5));
-        }
-        await obsW(path,dc);
       }
-    }catch(e){console.log("[SC] daily update error:",e)}
-  }
+      await obsW(path,dc);
+    }
+  }catch(e){console.log("[SC] daily update error:",e)}
   onEntityCaptured("neuromarker");
 }
 
-// Capture screen callback — stores in innerState + captureNeuro for next save
+// Capture screen callback
 function stateForCapture(result){
   innerState.valence=result.valence;
   innerState.intensity=result.intensity;
   innerState.task_filter=result.task_filter;
   window._captureNeuro=result.neuro;
-  // Update preview
-  const em={positive:"😊",negative:"😔",neutral:"😐",mixed:"🌀"};
   const preview=document.getElementById("isPreview");
-  if(preview){
-    const parts=[];
-    if(result.valence)parts.push(em[result.valence]+" "+result.valence+" · "+result.intensity+"/10");
-    const active=NEURO_AXES.filter(a=>result.neuro[a.key]!==5);
-    if(active.length)parts.push(active.map(a=>a.emoji+result.neuro[a.key]).join(" "));
-    preview.textContent=parts.length?parts.join(" │ "):"tap to capture state";
-  }
+  if(preview)preview.textContent=result.preset_emoji+" "+result.preset_name;
   return Promise.resolve();
 }
 
@@ -1576,9 +1740,15 @@ function renderInboxDetail(idx){
 }
 
 function openInboxStateCapture(idx){
-  openStateCapture("capture",async function(result){
+  openStateCapture("inbox",async function(result){
     reviewNeuro={...result.neuro};
     updateNeuroBarPreview();
+    // Update the bar to show selected state
+    const bar=document.getElementById("reviewNeuroBar");
+    if(bar){
+      const toggle=bar.querySelector(".neuro-bar-toggle");
+      if(toggle)toggle.textContent=result.preset_emoji+" "+result.preset_name;
+    }
   });
 }
 function adjReviewNeuro(key,delta){
@@ -1867,7 +2037,7 @@ function showSettings(){
   +'<div class="sgroup"><div class="slabel">SYNC &amp; DATA</div><div style="font-size:11px;margin-bottom:4px">Vault sync: <span style="color:'+syncColor+';font-weight:700">'+syncText+'</span></div><div style="font-size:11px;color:var(--dim);margin-bottom:8px" id="bufStatsLine">Buffer: loading...</div><div style="display:flex;gap:8px"><button class="btn btn-s" style="flex:1;background:var(--amber-bg);border-color:var(--amber);color:var(--amber)" onclick="exportBuffer()">📦 Export</button><button class="btn btn-s" style="flex:1" onclick="bufferCleanExpired().then(n=>toast(n+\' expired removed\',\'success\'))">🧹 Clean</button></div></div>'
   +'<div class="sgroup"><div class="slabel">NOTIFICATIONS</div><button class="btn btn-s" style="width:100%" onclick="reqNotif()">Enable Notifications</button></div>'
   +'<div class="sgroup"><div class="slabel">AI LEARNING ('+corrections.length+' corrections)</div><div style="font-size:11px;color:var(--dim);margin-bottom:8px">ATLAS learns from your inbox edits to improve future routing.</div>'+(corrections.length?'<div style="max-height:120px;overflow-y:auto;background:var(--bg2);border-radius:8px;padding:8px;margin-bottom:8px">'+corrections.slice(0,10).map(c=>'<div style="font-size:10px;color:var(--dimmer);margin-bottom:4px">'+esc(c.field)+': "'+esc(c.from)+'" → "'+esc(c.to)+'"</div>').join("")+'</div>':"")+'<button class="btn btn-s" style="width:100%" onclick="if(confirm(\'Clear all corrections?\')){localStorage.removeItem(\'atlas-corrections\');showSettings()}">Clear Learning Data</button></div>'
-  +'<div class="sgroup"><div class="slabel">SYSTEM</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">ATLAS V12 Light · v11.6</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">Build: '+TD+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">GitHub Vault: '+(ghOk?"✅ Connected":"❌ Not connected")+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">Local Obsidian: '+(vault&&!ghOk?"✅ Connected":"⚪ Optional")+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">IndexedDB: '+(db?"✅ Ready":"❌ Not init")+'</div><div style="font-size:11px;color:var(--dimmer)">Limitless: '+(lmtKey?"✅ Key set":"❌ No key")+'</div></div></div>';
+  +'<div class="sgroup"><div class="slabel">SYSTEM</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">ATLAS V12 Light · v11.7</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">Build: '+TD+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">GitHub Vault: '+(ghOk?"✅ Connected":"❌ Not connected")+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">Local Obsidian: '+(vault&&!ghOk?"✅ Connected":"⚪ Optional")+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">IndexedDB: '+(db?"✅ Ready":"❌ Not init")+'</div><div style="font-size:11px;color:var(--dimmer)">Limitless: '+(lmtKey?"✅ Key set":"❌ No key")+'</div></div></div>';
   o.style.display="flex";
   showBufferStats();
 }
