@@ -917,9 +917,9 @@ captureLocation();
 // ─── ENTITIES ───
 const ENTITIES={
 daily:{l:"Daily",e:"📋",dest:"Agenda/daily",fn:()=>"daily_"+TD+".md",tags:["nelos/daily","v12"],capture:"date, day_type, eating_window_start, eating_window_end, hydration_liters, wins_effort, wins_result, friction_points, notes, atlas_notes",autofill:"type: daily, layer: jar, status: active, created: "+TD+", updated: "+TD,stance:"Coach",gate:"proceed",tone:"supportive,energizing",keyFields:["date","day_type","energy","focus"]},
-task:{l:"Task",e:"🎯",dest:"Capture/inbox",fn:n=>"task_"+sl(n)+".md",tags:["nelos/task","v12"],capture:"name, atomic_action, success_condition, deadline, parent, reward, scheduled_time, scheduled_duration, notes, atlas_notes",autofill:"type: task, layer: jar, status: ready, created: "+TD+", updated: "+TD+", source: manual, task_type: action, friction: 5, priority: standard, time_estimate: 15",stance:"Supportive",gate:"SOFT_GATE",tone:"warm,action-oriented",keyFields:["name","status","priority","deadline","atomic_action"]},
+task:{l:"Task",e:"🎯",dest:"Agenda/tasks",fn:n=>"task_"+sl(n)+".md",tags:["nelos/task","v12"],capture:"name, atomic_action, success_condition, deadline, parent, reward, scheduled_time, scheduled_duration, notes, atlas_notes",autofill:"type: task, layer: jar, status: ready, created: "+TD+", updated: "+TD+", source: manual, task_type: action, friction: 5, priority: standard, time_estimate: 15",stance:"Supportive",gate:"SOFT_GATE",tone:"warm,action-oriented",keyFields:["name","status","priority","deadline","atomic_action"]},
 journal:{l:"Journal",e:"📝",dest:"Journals/entries",fn:()=>"journal_"+TD+"_"+NS()+".md",tags:["nelos/journal","v12"],capture:"journal_type, date, intel_gathered, people_mentioned, insights_captured, notes, atlas_notes",autofill:"type: journal, layer: marble, status: complete, created: "+TD+", updated: "+TD+", source: manual",stance:"Companion",gate:"proceed",tone:"quick,minimal,supportive",keyFields:["journal_type","date"]},
-habit:{l:"Habit",e:"🔄",dest:"Capture/inbox",fn:n=>"habit_"+sl(n)+".md",tags:["nelos/habit","v12"],capture:"name, habit_type, cue, craving, response, reward_program, frequency, scheduled_time, scheduled_duration, notes, atlas_notes",autofill:"type: habit, layer: marble, status: active, created: "+TD+", updated: "+TD+", source: manual, current_streak: 0, streak_goal: 66",stance:"Identity Mirror",gate:"SOFT_GATE",tone:"affirming,identity-reinforcing",keyFields:["name","habit_type","cue","frequency","scheduled_duration"]},
+habit:{l:"Habit",e:"🔄",dest:"Behavior/habits",fn:n=>"habit_"+sl(n)+".md",tags:["nelos/habit","v12"],capture:"name, habit_type, cue, craving, response, reward_program, frequency, scheduled_time, scheduled_duration, notes, atlas_notes",autofill:"type: habit, layer: marble, status: active, created: "+TD+", updated: "+TD+", source: manual, current_streak: 0, streak_goal: 66",stance:"Identity Mirror",gate:"SOFT_GATE",tone:"affirming,identity-reinforcing",keyFields:["name","habit_type","cue","frequency","scheduled_duration"]},
 purchase:{l:"Purchase",e:"💳",dest:"Capture/purchases",fn:()=>"purchase_"+TD+"_"+NS()+".md",tags:["nelos/purchase_actual","v12"],capture:"item_name, actual_cost, category, purchased_date, need_vs_want, vendor, payment_method, motivation, notes, atlas_notes",autofill:"type: purchase_actual, layer: marble, status: complete, created: "+TD+", updated: "+TD+", currency: TRY",stance:"Coach",gate:"checkpoint",tone:"prosperous,mindful,aligned",keyFields:["item_name","actual_cost","currency","vendor","category","need_vs_want"]},
 insight:{l:"Insight",e:"💡",dest:"Knowledge/insights",fn:()=>"insight_"+TD+"_"+NS()+".md",tags:["nelos/insight","v12"],capture:"name, insight_subtype, domain, origin, quick_summary, detail, application_ideas, when_to_use, notes, atlas_notes",autofill:"type: insight, layer: sand, status: captured, created: "+TD+", updated: "+TD+", source: manual",stance:"Coach",gate:"proceed",tone:"playful,encouraging",keyFields:["name","insight_subtype","domain","quick_summary"]},
 people:{l:"People",e:"👤",dest:"CRM/contacts",fn:n=>"person_"+sl(n)+".md",tags:["nelos/people","v12"],capture:"name, birthday, relationship_status, energy_impact, relationship_mode, contact_frequency_target, employer, job_title, shared_interests, notes, atlas_notes",autofill:"type: people, layer: sand, status: active, created: "+TD+", updated: "+TD+", source: manual, contact_streak: 0",stance:"Coach",gate:"checkpoint",tone:"relational,intentional,caring",keyFields:["name","employer","job_title","energy_impact","relationship_mode"]},
@@ -948,9 +948,12 @@ async function ghR(p){
   const d=await r.json();return decodeURIComponent(escape(atob(d.content.replace(/\n/g,""))))
 }
 async function ghD(p){
-  try{const r=await fetch(GH+"/repos/"+ghRepo+"/contents/"+encodeURI(p),{headers:{"Authorization":"token "+ghToken}});if(!r.ok)return false;const d=await r.json();
+  const r=await fetch(GH+"/repos/"+ghRepo+"/contents/"+encodeURI(p),{headers:{"Authorization":"token "+ghToken}});
+  if(!r.ok){console.error("[ATLAS] ghD GET failed:",r.status,p);throw new Error("Delete GET failed: "+r.status)}
+  const d=await r.json();
   const dr=await fetch(GH+"/repos/"+ghRepo+"/contents/"+encodeURI(p),{method:"DELETE",headers:{"Authorization":"token "+ghToken,"Content-Type":"application/json"},body:JSON.stringify({message:"ATLAS: delete "+p.split("/").pop(),sha:d.sha})});
-  return dr.ok}catch(e){return false}
+  if(!dr.ok){console.error("[ATLAS] ghD DELETE failed:",dr.status,p);throw new Error("Delete failed: "+dr.status)}
+  return true
 }
 async function ghDir(f){
   const r=await fetch(GH+"/repos/"+ghRepo+"/contents/"+encodeURI(f),{headers:{"Authorization":"token "+ghToken}});if(!r.ok)return[];
@@ -965,7 +968,7 @@ async function testGh(){
 }
 async function obsW(p,c){if(ghOk&&ghToken)return ghW(p,c);const r=await fetch(OBS+"/vault/"+encodeURI(p),{method:"PUT",headers:{"Authorization":"Bearer "+OBSK,"Content-Type":"text/markdown"},body:c});if(!r.ok)throw new Error("Vault "+r.status);return true}
 async function obsR(p){if(ghOk&&ghToken)return ghR(p);const r=await fetch(OBS+"/vault/"+encodeURI(p),{headers:{"Authorization":"Bearer "+OBSK,"Accept":"text/markdown"}});if(!r.ok)return null;return await r.text()}
-async function obsD(p){if(ghOk&&ghToken)return ghD(p);const r=await fetch(OBS+"/vault/"+encodeURI(p),{method:"DELETE",headers:{"Authorization":"Bearer "+OBSK}});return r.ok}
+async function obsD(p){if(ghOk&&ghToken)return ghD(p);const r=await fetch(OBS+"/vault/"+encodeURI(p),{method:"DELETE",headers:{"Authorization":"Bearer "+OBSK}});if(!r.ok)throw new Error("Delete failed: "+r.status);return true}
 async function obsDir(f){if(ghOk&&ghToken)return ghDir(f);const r=await fetch(OBS+"/vault/"+f,{headers:{"Authorization":"Bearer "+OBSK}});if(!r.ok)return[];const d=await r.json();return d.files||[]}
 async function claude(prompt,sys){
   if(!cKey)throw new Error("Set Claude API key in Settings ⚙");
@@ -1190,7 +1193,7 @@ function attachCardSwipe(){
 
 async function cardAction(action){
   const item=inboxItems[inboxIdx];if(!item||item._done)return;item._done=true;
-  if(action==="approve"){try{const np=item.dest+"/"+item.filename;await obsW(np,item.content);if(np!==item.path)await obsD(item.path);toast("✅ → "+item.dest+"/","success")}catch(e){item._done=false;toast("Move failed","error");return}}
+  if(action==="approve"){try{const np=item.dest+"/"+item.filename;console.log("[ATLAS] Approve: write→",np,"delete→",item.path);await obsW(np,item.content);if(np!==item.path){await obsD(item.path);console.log("[ATLAS] Deleted from inbox")}else{console.warn("[ATLAS] Same path, skip delete")}toast("✅ → "+item.dest+"/","success")}catch(e){item._done=false;toast("Move failed: "+e.message,"error");console.error("[ATLAS]",e);return}}
   else if(action==="delete"){try{await obsD(item.path);toast("🗑️ Removed","success")}catch(e){item._done=false;toast("Delete failed","error");return}}
   inboxUndoStack.push({idx:inboxIdx,action:action,item:item});onEntityCaptured(item.entityType);inboxIdx++;updInboxCount();renderInboxCard();
 }
