@@ -729,7 +729,7 @@ const SC_ZONES=[
   {key:"depleted",emoji:"📉",name:"DEPLETED",hint:"running on empty"}
 ];
 
-let _scData={preset:null,neuro:{},context_who:"",context_where:"",journal:"",timestamp:null};
+let _scData={preset:null,neuro:{},context_who:"",context_where:"",context_type:"",journal:"",timestamp:null};
 let _scCallback=null;
 let _scContext="standalone";
 let _scRecentStates=JSON.parse(localStorage.getItem("sc_recents")||"[]").slice(0,3);
@@ -744,7 +744,7 @@ function _scSaveRecent(presetKey){
 function openStateCapture(context,callback){
   _scCallback=callback||null;
   _scContext=context||"standalone";
-  _scData={preset:null,neuro:{},context_who:"",context_where:"",journal:"",timestamp:NOW()};
+  _scData={preset:null,neuro:{},context_who:"",context_where:"",context_type:"",journal:"",timestamp:NOW()};
   NEURO_AXES.forEach(a=>_scData.neuro[a.key]=5);
 
   const temporal=["inbox","lifelog","intercept"].includes(context);
@@ -824,17 +824,17 @@ function scSelectPreset(key){
   const post=document.getElementById("scPostSelect");
   let h='<div style="text-align:center;margin-bottom:14px"><span style="font-size:36px">'+p.emoji+'</span><div style="font-size:18px;font-weight:800;color:var(--amber);font-family:var(--mono);margin-top:4px">'+p.name+'</div><div style="font-size:11px;color:var(--dimmer);font-family:var(--mono);margin-top:2px">'+p.valence+' · intensity '+p.intensity+' · '+p.task_filter+'</div></div>';
 
-  // Conditional: Who field
+  // Conditional: Who field (AI-need framing)
   if(p.askWho){
-    h+='<div class="sc-context-field"><div style="font-size:11px;color:var(--dim);font-family:var(--mono);font-weight:700;letter-spacing:1px;margin-bottom:6px">👤 '+p.askWho+'</div>';
+    h+='<div class="sc-context-field"><div style="font-size:11px;color:var(--blue);font-family:var(--mono);font-weight:700;letter-spacing:1px;margin-bottom:6px">🤖 Atlas can spot patterns — '+p.askWho+'</div>';
     h+='<div class="sc-people-chips" id="scPeopleChips"></div>';
     h+='<input class="sc-input" id="sc_who" placeholder="type name..." oninput="_scData.context_who=this.value" /></div>';
   }
 
-  // Conditional: Where field
+  // Conditional: Where field (AI-need framing)
   if(p.askWhere){
-    h+='<div class="sc-context-field"><div style="font-size:11px;color:var(--dim);font-family:var(--mono);font-weight:700;letter-spacing:1px;margin-bottom:6px">📍 Where are you?</div>';
-    h+='<input class="sc-input" id="sc_where" placeholder="location..." oninput="_scData.context_where=this.value" /></div>';
+    h+='<div class="sc-context-field"><div style="font-size:11px;color:var(--blue);font-family:var(--mono);font-weight:700;letter-spacing:1px;margin-bottom:6px">🤖 Atlas maps your recharge spots</div>';
+    h+='<input class="sc-input" id="sc_where" placeholder="📍 where..." oninput="_scData.context_where=this.value" /></div>';
   }
 
   // Conditional: Journal field
@@ -844,16 +844,47 @@ function scSelectPreset(key){
     h+='<button class="sc-mic" onclick="scVoiceJournal()" title="Voice">🎤</button></div></div>';
   }
 
-  // Fine-tune axes (collapsed)
-  h+='<div class="sc-section"><div class="sc-label" onclick="document.getElementById(\'scFineTune\').classList.toggle(\'open\')">🔧 FINE-TUNE AXES <span style="font-size:10px;color:var(--dimmer)">▼</span></div>';
-  h+='<div class="sc-finetune" id="scFineTune"><div class="sc-neuro-grid">';
+  // Fine-tune section — ALWAYS has context + axes
+  h+='<div class="sc-section"><div class="sc-label" onclick="document.getElementById(\'scFineTune\').classList.toggle(\'open\')">🔧 FINE-TUNE <span style="font-size:10px;color:var(--dimmer)">▼ add context + adjust axes</span></div>';
+  h+='<div class="sc-finetune" id="scFineTune">';
+
+  // Context fields (always available in fine-tune)
+  if(!p.askWho){
+    h+='<div class="sc-context-field" style="margin-bottom:8px"><div style="font-size:10px;color:var(--dim);font-family:var(--mono);letter-spacing:1px;margin-bottom:4px">👤 WHO WITH</div>';
+    h+='<div class="sc-people-chips" id="scPeopleChips"></div>';
+    h+='<input class="sc-input" id="sc_who" placeholder="name..." oninput="_scData.context_who=this.value" /></div>';
+  }
+  if(!p.askWhere){
+    h+='<div class="sc-context-field" style="margin-bottom:8px"><div style="font-size:10px;color:var(--dim);font-family:var(--mono);letter-spacing:1px;margin-bottom:4px">📍 WHERE</div>';
+    h+='<input class="sc-input" id="sc_where" placeholder="location..." oninput="_scData.context_where=this.value" /></div>';
+  }
+
+  // Context type (always available) — maps to Context entity type enum
+  h+='<div class="sc-context-field" style="margin-bottom:12px"><div style="font-size:10px;color:var(--dim);font-family:var(--mono);letter-spacing:1px;margin-bottom:4px">🎯 CONTEXT</div>';
+  h+='<div style="display:flex;gap:6px;flex-wrap:wrap">';
+  [{k:"work",e:"💼",l:"Work"},{k:"social",e:"👥",l:"Social"},{k:"recovery",e:"🧘",l:"Recovery"},{k:"creative",e:"🎨",l:"Creative"}].forEach(c=>{
+    h+='<button class="sc-people-chip" onclick="scPickContext(this,\''+c.k+'\')">'+c.e+' '+c.l+'</button>';
+  });
+  h+='</div></div>';
+
+  // Journal field (in fine-tune if not already shown above)
+  if(!p.journal){
+    h+='<div class="sc-context-field" style="margin-bottom:12px"><div style="font-size:10px;color:var(--dim);font-family:var(--mono);letter-spacing:1px;margin-bottom:4px">💭 NOTE</div>';
+    h+='<div style="display:flex;gap:8px;align-items:flex-start"><textarea class="sc-journal" id="sc_journal" placeholder="anything on your mind..." oninput="_scData.journal=this.value"></textarea>';
+    h+='<button class="sc-mic" onclick="scVoiceJournal()" title="Voice">🎤</button></div></div>';
+  }
+
+  // Neuro axes
+  h+='<div style="font-size:10px;color:var(--dim);font-family:var(--mono);letter-spacing:1px;margin-bottom:6px">⚡ NEURO AXES</div>';
+  h+='<div class="sc-neuro-grid">';
   NEURO_AXES.forEach(a=>{
     const v=_scData.neuro[a.key];
     h+='<div class="sc-neuro-row"><button class="sc-adj" onclick="scNeuro(\''+a.key+'\',-1)">−</button>';
     h+='<div class="sc-neuro-mid"><span>'+a.emoji+'</span><span class="sc-neuro-val '+(v>5?"pos":v<5?"neg":"neutral")+'" id="sc_n_'+a.key+'">'+(v===5?"·":v)+'</span><span class="sc-neuro-name">'+a.name+'</span></div>';
     h+='<button class="sc-adj" onclick="scNeuro(\''+a.key+'\',1)">+</button></div>';
   });
-  h+='</div></div></div>';
+  h+='</div>';
+  h+='</div></div>';
 
   // "Also capture NOW" for review contexts
   if(["inbox","lifelog"].includes(_scContext)){
@@ -866,8 +897,8 @@ function scSelectPreset(key){
   post.innerHTML=h;
   post.style.display="block";
 
-  // Load recent people chips if who field exists
-  if(p.askWho)scLoadPeopleChips();
+  // Load people chips (always — either in main or fine-tune)
+  scLoadPeopleChips();
 }
 
 function scNeuro(key,d){
@@ -895,11 +926,19 @@ async function scLoadPeopleChips(){
 }
 
 function scPickPerson(el,name){
-  document.querySelectorAll(".sc-people-chip").forEach(c=>c.classList.remove("active"));
+  document.querySelectorAll(".sc-people-chip").forEach(c=>{if(c.closest(".sc-context-field")===el.closest(".sc-context-field"))c.classList.remove("active")});
   el.classList.add("active");
   _scData.context_who=name;
   const input=document.getElementById("sc_who");
   if(input)input.value=name;
+}
+
+function scPickContext(el,type){
+  // Toggle — tap again to deselect
+  const wasActive=el.classList.contains("active");
+  el.parentElement.querySelectorAll(".sc-people-chip").forEach(c=>c.classList.remove("active"));
+  if(!wasActive){el.classList.add("active");_scData.context_type=type}
+  else{_scData.context_type=""}
 }
 
 function scVoiceJournal(){
@@ -955,6 +994,7 @@ async function saveStateCapture(){
     neuro:{...(_scData.neuro)},
     context_who:_scData.context_who,
     context_where:_scData.context_where,
+    context_type:_scData.context_type,
     journal:_scData.journal,
     timestamp:_scData.timestamp||NOW(),
     is_historical:["inbox","lifelog","intercept"].includes(_scContext)
@@ -998,6 +1038,7 @@ async function saveStateToDaily(result){
     yaml+="composite: "+avg+"\ninner_state_valence: "+result.valence+"\ninner_state_intensity: "+result.intensity+"\ntask_filter: "+result.task_filter+"\n";
     if(result.context_who)yaml+="context_who: \""+result.context_who+"\"\n";
     if(result.context_where)yaml+="context_where: \""+result.context_where+"\"\n";
+    if(result.context_type)yaml+="context_type: "+result.context_type+"\n";
     yaml+="---\n";
     await obsW("Health/neuromarkers/neuromarker_"+TD+"_"+NS()+".md",yaml,true);
   }
@@ -2037,7 +2078,7 @@ function showSettings(){
   +'<div class="sgroup"><div class="slabel">SYNC &amp; DATA</div><div style="font-size:11px;margin-bottom:4px">Vault sync: <span style="color:'+syncColor+';font-weight:700">'+syncText+'</span></div><div style="font-size:11px;color:var(--dim);margin-bottom:8px" id="bufStatsLine">Buffer: loading...</div><div style="display:flex;gap:8px"><button class="btn btn-s" style="flex:1;background:var(--amber-bg);border-color:var(--amber);color:var(--amber)" onclick="exportBuffer()">📦 Export</button><button class="btn btn-s" style="flex:1" onclick="bufferCleanExpired().then(n=>toast(n+\' expired removed\',\'success\'))">🧹 Clean</button></div></div>'
   +'<div class="sgroup"><div class="slabel">NOTIFICATIONS</div><button class="btn btn-s" style="width:100%" onclick="reqNotif()">Enable Notifications</button></div>'
   +'<div class="sgroup"><div class="slabel">AI LEARNING ('+corrections.length+' corrections)</div><div style="font-size:11px;color:var(--dim);margin-bottom:8px">ATLAS learns from your inbox edits to improve future routing.</div>'+(corrections.length?'<div style="max-height:120px;overflow-y:auto;background:var(--bg2);border-radius:8px;padding:8px;margin-bottom:8px">'+corrections.slice(0,10).map(c=>'<div style="font-size:10px;color:var(--dimmer);margin-bottom:4px">'+esc(c.field)+': "'+esc(c.from)+'" → "'+esc(c.to)+'"</div>').join("")+'</div>':"")+'<button class="btn btn-s" style="width:100%" onclick="if(confirm(\'Clear all corrections?\')){localStorage.removeItem(\'atlas-corrections\');showSettings()}">Clear Learning Data</button></div>'
-  +'<div class="sgroup"><div class="slabel">SYSTEM</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">ATLAS V12 Light · v11.7</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">Build: '+TD+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">GitHub Vault: '+(ghOk?"✅ Connected":"❌ Not connected")+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">Local Obsidian: '+(vault&&!ghOk?"✅ Connected":"⚪ Optional")+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">IndexedDB: '+(db?"✅ Ready":"❌ Not init")+'</div><div style="font-size:11px;color:var(--dimmer)">Limitless: '+(lmtKey?"✅ Key set":"❌ No key")+'</div></div></div>';
+  +'<div class="sgroup"><div class="slabel">SYSTEM</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">ATLAS V12 Light · v11.8</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">Build: '+TD+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">GitHub Vault: '+(ghOk?"✅ Connected":"❌ Not connected")+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">Local Obsidian: '+(vault&&!ghOk?"✅ Connected":"⚪ Optional")+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">IndexedDB: '+(db?"✅ Ready":"❌ Not init")+'</div><div style="font-size:11px;color:var(--dimmer)">Limitless: '+(lmtKey?"✅ Key set":"❌ No key")+'</div></div></div>';
   o.style.display="flex";
   showBufferStats();
 }
