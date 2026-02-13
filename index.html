@@ -337,6 +337,9 @@ let captureSeed=null;
 let linkCounter=1;
 let oaiKey=localStorage.getItem("oai-key")||"";
 let lmtKey=localStorage.getItem("lmt-key")||"";
+let ghToken=localStorage.getItem("gh-token")||"";
+let ghRepo=localStorage.getItem("gh-repo")||"psipath/nexus-vault";
+let ghOk=false;
 let lastSweep=localStorage.getItem("last-sweep")||"";
 let lastSync=localStorage.getItem("last-sync")||"";
 let db=null; // IndexedDB reference
@@ -426,7 +429,7 @@ async function bufferCleanExpired(){
 }
 
 // ─── LIMITLESS API ───
-const LMT_BASE="https://atlas-proxy.psipath.workers.dev";
+const LMT_BASE="https://api.limitless.ai/v1";
 async function lmtFetch(path,params={}){
   const url=new URL(LMT_BASE+path);
   Object.entries(params).forEach(([k,v])=>{if(v!==undefined&&v!==null)url.searchParams.set(k,v)});
@@ -927,12 +930,43 @@ sleep:{l:"Sleep",e:"😴",dest:"Health/sleep",fn:()=>"sleep_"+TD+".md",tags:["ne
 
 // ─── HELPERS ───
 function toast(m,t){t=t||"info";const e=document.getElementById("toast");e.className="toast "+t;e.textContent=m;e.style.display="flex";clearTimeout(e._t);e._t=setTimeout(()=>e.style.display="none",3000)}
-async function testV(){try{const r=await fetch(OBS+"/",{headers:{"Authorization":"Bearer "+OBSK}});vault=r.ok}catch(e){vault=false}document.getElementById("hVault").innerHTML='<span class="dot '+(vault?"on":"off")+'"></span>'}
-async function obsW(p,c){const r=await fetch(OBS+"/vault/"+encodeURI(p),{method:"PUT",headers:{"Authorization":"Bearer "+OBSK,"Content-Type":"text/markdown"},body:c});if(!r.ok)throw new Error("Vault "+r.status);return true}
-async function obsR(p){const r=await fetch(OBS+"/vault/"+encodeURI(p),{headers:{"Authorization":"Bearer "+OBSK,"Accept":"text/markdown"}});if(!r.ok)return null;return await r.text()}
-async function obsD(p){const r=await fetch(OBS+"/vault/"+encodeURI(p),{method:"DELETE",headers:{"Authorization":"Bearer "+OBSK}});return r.ok}
-async function obsSearch(q){const r=await fetch(OBS+"/search/simple/?query="+encodeURIComponent(q),{headers:{"Authorization":"Bearer "+OBSK}});if(!r.ok)return[];return await r.json()}
-async function obsDir(f){const r=await fetch(OBS+"/vault/"+f,{headers:{"Authorization":"Bearer "+OBSK}});if(!r.ok)return[];const d=await r.json();return d.files||[]}
+async function testV(){
+  if(ghToken){try{const r=await fetch("https://api.github.com/repos/"+ghRepo,{headers:{"Authorization":"token "+ghToken}});ghOk=r.ok;if(ghOk){vault=true;document.getElementById("hVault").innerHTML='<span class="dot on"></span>';return}}catch(e){ghOk=false}}
+  try{const r=await fetch(OBS+"/",{headers:{"Authorization":"Bearer "+OBSK}});vault=r.ok}catch(e){vault=false}
+  document.getElementById("hVault").innerHTML='<span class="dot '+(vault?"on":"off")+'"></span>'
+}
+const GH="https://api.github.com";
+async function ghW(p,c){
+  const b64=btoa(unescape(encodeURIComponent(c)));let sha=null;
+  try{const r=await fetch(GH+"/repos/"+ghRepo+"/contents/"+encodeURI(p),{headers:{"Authorization":"token "+ghToken}});if(r.ok){const d=await r.json();sha=d.sha}}catch(e){}
+  const payload={message:"ATLAS: "+p.split("/").pop(),content:b64};if(sha)payload.sha=sha;
+  const r=await fetch(GH+"/repos/"+ghRepo+"/contents/"+encodeURI(p),{method:"PUT",headers:{"Authorization":"token "+ghToken,"Content-Type":"application/json"},body:JSON.stringify(payload)});
+  if(!r.ok)throw new Error("GitHub "+r.status);return true
+}
+async function ghR(p){
+  const r=await fetch(GH+"/repos/"+ghRepo+"/contents/"+encodeURI(p),{headers:{"Authorization":"token "+ghToken}});if(!r.ok)return null;
+  const d=await r.json();return decodeURIComponent(escape(atob(d.content.replace(/\n/g,""))))
+}
+async function ghD(p){
+  try{const r=await fetch(GH+"/repos/"+ghRepo+"/contents/"+encodeURI(p),{headers:{"Authorization":"token "+ghToken}});if(!r.ok)return false;const d=await r.json();
+  const dr=await fetch(GH+"/repos/"+ghRepo+"/contents/"+encodeURI(p),{method:"DELETE",headers:{"Authorization":"token "+ghToken,"Content-Type":"application/json"},body:JSON.stringify({message:"ATLAS: delete "+p.split("/").pop(),sha:d.sha})});
+  return dr.ok}catch(e){return false}
+}
+async function ghDir(f){
+  const r=await fetch(GH+"/repos/"+ghRepo+"/contents/"+encodeURI(f),{headers:{"Authorization":"token "+ghToken}});if(!r.ok)return[];
+  const d=await r.json();if(!Array.isArray(d))return[];return d.map(i=>i.name)
+}
+async function testGh(){
+  if(!ghToken){toast("Enter a GitHub token first","error");return}
+  try{const r=await fetch(GH+"/repos/"+ghRepo,{headers:{"Authorization":"token "+ghToken}});
+  if(r.ok){ghOk=true;vault=true;document.getElementById("hVault").innerHTML='<span class="dot on"></span>';toast("✅ GitHub vault connected","success")}
+  else{ghOk=false;toast("❌ GitHub: "+r.status,"error")}}
+  catch(e){ghOk=false;toast("❌ GitHub: "+e.message,"error")}
+}
+async function obsW(p,c){if(ghOk&&ghToken)return ghW(p,c);const r=await fetch(OBS+"/vault/"+encodeURI(p),{method:"PUT",headers:{"Authorization":"Bearer "+OBSK,"Content-Type":"text/markdown"},body:c});if(!r.ok)throw new Error("Vault "+r.status);return true}
+async function obsR(p){if(ghOk&&ghToken)return ghR(p);const r=await fetch(OBS+"/vault/"+encodeURI(p),{headers:{"Authorization":"Bearer "+OBSK,"Accept":"text/markdown"}});if(!r.ok)return null;return await r.text()}
+async function obsD(p){if(ghOk&&ghToken)return ghD(p);const r=await fetch(OBS+"/vault/"+encodeURI(p),{method:"DELETE",headers:{"Authorization":"Bearer "+OBSK}});return r.ok}
+async function obsDir(f){if(ghOk&&ghToken)return ghDir(f);const r=await fetch(OBS+"/vault/"+f,{headers:{"Authorization":"Bearer "+OBSK}});if(!r.ok)return[];const d=await r.json();return d.files||[]}
 async function claude(prompt,sys){
   if(!cKey)throw new Error("Set Claude API key in Settings ⚙");
   const body={model:"claude-sonnet-4-20250514",max_tokens:2000,messages:[{role:"user",content:prompt}]};
@@ -1332,14 +1366,15 @@ function showSettings(){
   const syncColor=syncAge<0?"var(--dimmer)":syncAge<72?"var(--green)":syncAge<120?"var(--amber)":"var(--red)";
   const syncText=syncAge<0?"never":syncAge<1?"just now":syncAge<24?syncAge+"h ago":Math.round(syncAge/24)+"d ago";
   o.innerHTML='<div class="overlay-header"><span class="overlay-title">⚙ SETTINGS</span><button class="overlay-close" onclick="hideOverlay(\'settings\')">✕</button></div><div class="overlay-body">'
-  +'<div class="sgroup"><div class="slabel">CONNECTION</div><div class="sfield"><label>Obsidian REST URL</label><input id="sObs" value="'+esc(OBS)+'" /></div><div class="sfield" style="margin-top:6px"><label>Obsidian API Key</label><input id="sObsk" type="password" value="'+esc(OBSK)+'" /></div><div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-s" style="flex:1" onclick="saveObs()">Save</button><button class="btn btn-s" style="flex:1" onclick="testV().then(()=>toast(vault?\'✅ Connected\':\'❌ Failed\',vault?\'success\':\'error\'))">Test</button></div></div>'
+  +'<div class="sgroup"><div class="slabel">📦 GITHUB VAULT (PRIMARY)</div><div class="sfield"><label>GitHub Token</label><input id="sGhToken" type="password" value="'+esc(ghToken)+'" /></div><div class="sfield" style="margin-top:6px"><label>Repo (owner/name)</label><input id="sGhRepo" value="'+esc(ghRepo)+'" /></div><div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-s" style="flex:1" onclick="saveGh()">Save</button><button class="btn btn-s" style="flex:1" onclick="testGh()">Test</button></div><div style="font-size:10px;color:var(--dimmer);margin-top:4px">'+(ghOk?"✅ Connected":"GitHub = works from anywhere. No Mac needed.")+'</div></div>'
+  +'<div class="sgroup"><div class="slabel">CONNECTION (LOCAL OBSIDIAN)</div><div style="font-size:10px;color:var(--dimmer);margin-bottom:6px">Optional — for direct local access on MacBook</div><div class="sfield"><label>Obsidian REST URL</label><input id="sObs" value="'+esc(OBS)+'" /></div><div class="sfield" style="margin-top:6px"><label>Obsidian API Key</label><input id="sObsk" type="password" value="'+esc(OBSK)+'" /></div><div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-s" style="flex:1" onclick="saveObs()">Save</button><button class="btn btn-s" style="flex:1" onclick="testV().then(()=>toast(vault?\'✅ Connected\':\'❌ Failed\',vault?\'success\':\'error\'))">Test</button></div></div>'
   +'<div class="sgroup"><div class="slabel">📡 LIMITLESS AI</div><div class="sfield"><label>Limitless API Key</label><input id="sLmt" type="password" value="'+esc(lmtKey)+'" /></div><div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-s" style="flex:1" onclick="saveLmt()">Save Key</button><button class="btn btn-s" style="flex:1" onclick="testLmt()">Test</button></div><div id="lmtStatus" style="font-size:10px;color:var(--dimmer);margin-top:4px">'+lmtInfo+'</div></div>'
   +'<div class="sgroup"><div class="slabel">AI — CLAUDE</div><div class="sfield"><label>Claude API Key</label><input id="sCk" type="password" value="'+esc(cKey)+'" /></div><button class="btn btn-s" style="width:100%;margin-top:8px" onclick="saveCk()">Save Key</button></div>'
   +'<div class="sgroup"><div class="slabel">AI — OPENAI (Whisper)</div><div class="sfield"><label>OpenAI API Key</label><input id="sOai" type="password" value="'+esc(oaiKey)+'" /></div><div style="font-size:10px;color:var(--dimmer);margin:4px 0">For long audio transcription. ~$0.006/min</div><button class="btn btn-s" style="width:100%;margin-top:8px" onclick="saveOai()">Save Key</button></div>'
   +'<div class="sgroup"><div class="slabel">SYNC &amp; DATA</div><div style="font-size:11px;margin-bottom:4px">Vault sync: <span style="color:'+syncColor+';font-weight:700">'+syncText+'</span></div><div style="font-size:11px;color:var(--dim);margin-bottom:8px" id="bufStatsLine">Buffer: loading...</div><div style="display:flex;gap:8px"><button class="btn btn-s" style="flex:1;background:var(--amber-bg);border-color:var(--amber);color:var(--amber)" onclick="exportBuffer()">📦 Export</button><button class="btn btn-s" style="flex:1" onclick="bufferCleanExpired().then(n=>toast(n+\' expired removed\',\'success\'))">🧹 Clean</button></div></div>'
   +'<div class="sgroup"><div class="slabel">NOTIFICATIONS</div><button class="btn btn-s" style="width:100%" onclick="reqNotif()">Enable Notifications</button></div>'
   +'<div class="sgroup"><div class="slabel">AI LEARNING ('+corrections.length+' corrections)</div><div style="font-size:11px;color:var(--dim);margin-bottom:8px">ATLAS learns from your inbox edits to improve future routing.</div>'+(corrections.length?'<div style="max-height:120px;overflow-y:auto;background:var(--bg2);border-radius:8px;padding:8px;margin-bottom:8px">'+corrections.slice(0,10).map(c=>'<div style="font-size:10px;color:var(--dimmer);margin-bottom:4px">'+esc(c.field)+': "'+esc(c.from)+'" → "'+esc(c.to)+'"</div>').join("")+'</div>':"")+'<button class="btn btn-s" style="width:100%" onclick="if(confirm(\'Clear all corrections?\')){localStorage.removeItem(\'atlas-corrections\');showSettings()}">Clear Learning Data</button></div>'
-  +'<div class="sgroup"><div class="slabel">SYSTEM</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">ATLAS V12 Light · v11.0</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">Build: '+TD+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">Vault: '+(vault?"✅ Connected":"❌ Offline")+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">IndexedDB: '+(db?"✅ Ready":"❌ Not init")+'</div><div style="font-size:11px;color:var(--dimmer)">Limitless: '+(lmtKey?"✅ Key set":"❌ No key")+'</div></div></div>';
+  +'<div class="sgroup"><div class="slabel">SYSTEM</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">ATLAS V12 Light · v11.1</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">Build: '+TD+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">GitHub Vault: '+(ghOk?"✅ Connected":"❌ Not connected")+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">Local Obsidian: '+(vault&&!ghOk?"✅ Connected":"⚪ Optional")+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">IndexedDB: '+(db?"✅ Ready":"❌ Not init")+'</div><div style="font-size:11px;color:var(--dimmer)">Limitless: '+(lmtKey?"✅ Key set":"❌ No key")+'</div></div></div>';
   o.style.display="flex";
   showBufferStats();
 }
@@ -1368,6 +1403,7 @@ async function exportBuffer(){
   }catch(e){toast("Export failed: "+e.message,"error")}
 }
 function saveObs(){OBS=document.getElementById("sObs").value.trim().replace(/\/$/,"");OBSK=document.getElementById("sObsk").value.trim();localStorage.setItem("obs-url",OBS);localStorage.setItem("obs-key",OBSK);testV();toast("Connection saved","success")}
+function saveGh(){ghToken=document.getElementById("sGhToken").value.trim();ghRepo=document.getElementById("sGhRepo").value.trim();localStorage.setItem("gh-token",ghToken);localStorage.setItem("gh-repo",ghRepo);testGh()}
 function saveCk(){cKey=document.getElementById("sCk").value.trim();localStorage.setItem("ck",cKey);toast("Key saved","success")}
 function saveOai(){oaiKey=document.getElementById("sOai").value.trim();localStorage.setItem("oai-key",oaiKey);toast("Whisper key saved","success")}
 function reqNotif(){if("Notification" in window)Notification.requestPermission().then(p=>toast(p==="granted"?"✅ Enabled":"❌ Denied",p==="granted"?"success":"error"));else toast("Not supported","error")}
