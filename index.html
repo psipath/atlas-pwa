@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="ATLAS">
 <meta name="theme-color" content="#0a0a0f">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<title>ATLAS — V12 Light</title>
+<title>ATLAS — V12.0 Light</title>
 <style>
 :root{--bg:#08080c;--bg2:#111118;--bg3:#1a1a24;--border:#2a2a3a;--text:#f0f0f5;--dim:#8888a0;--dimmer:#4a4a5a;--amber:#f5b040;--amber2:#e09820;--amber-bg:rgba(245,176,64,0.12);--green:#45d080;--green-bg:rgba(69,208,128,0.12);--red:#e84858;--red-bg:rgba(232,72,88,0.12);--blue:#5090e8;--blue-bg:rgba(80,144,232,0.12);--mono:'SF Mono','Fira Code','JetBrains Mono',monospace;--sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -245,6 +245,24 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);height:100dv
 .recording-float-time{font-family:var(--mono);font-size:24px;font-weight:900;color:var(--red)}
 .recording-float-label{font-size:11px;color:var(--dim)}
 .recording-float-stop{width:32px;height:32px;border-radius:8px;border:1px solid var(--red);background:var(--red-bg);color:var(--red);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   V12.0 — WORD SCALE COMPONENT STYLES
+   ═══════════════════════════════════════════════════════════════════════════ */
+.word-scale-grid{display:flex;flex-direction:column;gap:6px}
+.word-scale-btn{width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);background:var(--bg3);color:var(--dim);font-size:14px;font-weight:600;cursor:pointer;transition:all .12s;-webkit-tap-highlight-color:transparent;text-align:center}
+.word-scale-btn:active{transform:scale(0.97)}
+.word-scale-btn.active{border-color:var(--amber);background:var(--amber-bg);color:var(--amber)}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   V12.0 — CONTEXT CREATION POPUP STYLES  
+   ═══════════════════════════════════════════════════════════════════════════ */
+.context-create-row{display:flex;gap:8px;margin-bottom:12px}
+.context-create-col{flex:1;min-width:0}
+.context-label{font-size:11px;color:var(--dimmer);font-family:var(--mono);display:block;margin-bottom:6px}
+.context-preview{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;font-size:14px;color:var(--text);text-align:center;margin:12px 0;font-weight:600}
+.context-warning{background:var(--amber-bg);border:1px solid rgba(245,176,64,0.3);border-radius:10px;padding:10px;margin:12px 0;font-size:12px;color:var(--amber)}
+
 </style>
 </head>
 <body>
@@ -272,6 +290,7 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);height:100dv
   <div class="drawer-item" onclick="drawerHabit()"><span class="drawer-item-emoji">🔄</span><div class="drawer-item-text"><div class="drawer-item-name">Habit Check-in</div><div class="drawer-item-desc">Log from active habits</div></div></div>
   <div class="drawer-item" onclick="drawerIntercept()"><span class="drawer-item-emoji">🛡️</span><div class="drawer-item-text"><div class="drawer-item-name">Intercept</div><div class="drawer-item-desc">Craving → HARD GATE</div></div></div>
   <div class="drawer-item" onclick="drawerNeuro()"><span class="drawer-item-emoji">🧠</span><div class="drawer-item-text"><div class="drawer-item-name">State Capture</div><div class="drawer-item-desc">Inner state + neuro + context</div></div></div>
+  <div class="drawer-item" onclick="openContextCreation()"><span class="drawer-item-emoji">📍</span><div class="drawer-item-text"><div class="drawer-item-name">Create Context</div><div class="drawer-item-desc">TIME · LOCATION · STATE</div></div></div>
   <div class="drawer-sep"></div>
   <div class="drawer-item" onclick="drawerAction('water')"><span class="drawer-item-emoji">💧</span><div class="drawer-item-text"><div class="drawer-item-name">Water +1</div><div class="drawer-item-desc" id="waterCount">0 today</div></div></div>
   <div class="drawer-item" onclick="drawerAction('coffee')"><span class="drawer-item-emoji">☕</span><div class="drawer-item-text"><div class="drawer-item-name">Coffee +1</div><div class="drawer-item-desc" id="coffeeCount">0 today</div></div></div>
@@ -329,6 +348,23 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);height:100dv
 </div>
 
 <script>
+// ═══════════════════════════════════════════════════════════════════════════
+// ATLAS V12.0 — DATA QUALITY LAYER
+// 
+// Built: 2026-02-14
+// Components:
+//   ✅ SC003: Theme Vocabulary System (5 themes, Military default)
+//   ✅ SC002: 5-Word Intensity Scales (word buttons replace sliders)
+//   ✅ SC004: Context Naming Template (TIME · LOCATION · STATE)
+//   ✅ SC005: Context-Intercept Tallies (auto-update on save)
+//
+// Deferred to V12.1:
+//   ⏸️ Atlas Questions (SAT generation + AI prompting)
+//   ⏸️ NOT NOW Screen (planning interface)
+// ═══════════════════════════════════════════════════════════════════════════
+
+const ATLAS_VERSION = "12.0";
+
 const TD=new Date().toISOString().split("T")[0];
 const NOW=()=>new Date().toISOString();
 const NS=()=>Date.now().toString(36);
@@ -345,6 +381,93 @@ const TIT_KEYS=["what","why","how","when","with","where","cost","value","priorit
 const TIT_LABELS={what:"WHAT",why:"WHY",how:"HOW",when:"WHEN",with:"WITH",where:"WHERE",cost:"COST",value:"VALUE",priority:"PRI"};
 const INTENT_LABELS={save:"📎 Save",schedule:"📅 Schedule",thought:"💭 Thought",action:"⚡ Action",transaction:"💳 Transaction",reminder:"📌 Reminder"};
 const SEED_TYPES={content:{emoji:"📢",name:"Content",desc:"Create, share, repurpose"},moment:{emoji:"📸",name:"Moment",desc:"Capture with full context"},plan:{emoji:"🌱",name:"Plan",desc:"Wish, goal, aspiration"},review:{emoji:"🔍",name:"Review",desc:"Feasibility, status check"},reflect:{emoji:"🔄",name:"Reflect",desc:"Process, learn, reframe"},marble:{emoji:"💎",name:"Marble It!",desc:"Non-negotiable, must happen"}};
+
+// ═══════════════════════════════════════════════════════════════════════════
+// V12.0 — SC003: THEME VOCABULARY SYSTEM
+// 5 locked themes with CBT-informed word scales
+// ═══════════════════════════════════════════════════════════════════════════
+
+const THEMES = {
+  military: {
+    name: "Military Command",
+    key: "military",
+    color: "#f5b040",
+    emoji: "🎖️",
+    craving: {1:"Negligible", 2:"Minor", 3:"Moderate", 4:"Strong", 5:"Overwhelming"},
+    satisfaction: {1:"Worthless", 2:"Minimal", 3:"Adequate", 4:"Strong", 5:"Complete"},
+    confidence: {1:"Uncertain", 2:"Low", 3:"Moderate", 4:"High", 5:"Absolute"},
+    form_quality: {1:"Sloppy", 2:"Poor", 3:"Acceptable", 4:"Sharp", 5:"Flawless"},
+    surf: {1:"Faded", 2:"Weakening", 3:"Holding", 4:"Building", 5:"Overwhelming"},
+    neuro_summary: {1:"Depleted", 2:"Compromised", 3:"Operational", 4:"Sharp", 5:"Peak"}
+  },
+  detective: {
+    name: "Detective Investigation",
+    key: "detective",
+    color: "#5090e8",
+    emoji: "🔍",
+    craving: {1:"Faint", 2:"Subtle", 3:"Notable", 4:"Pressing", 5:"Consuming"},
+    satisfaction: {1:"Empty", 2:"Slight", 3:"Fair", 4:"Solid", 5:"Total"},
+    confidence: {1:"Speculative", 2:"Tentative", 3:"Reasonable", 4:"Strong", 5:"Conclusive"},
+    form_quality: {1:"Careless", 2:"Weak", 3:"Adequate", 4:"Precise", 5:"Perfect"},
+    surf: {1:"Gone", 2:"Fading", 3:"Steady", 4:"Rising", 5:"Critical"},
+    neuro_summary: {1:"Exhausted", 2:"Struggling", 3:"Adequate", 4:"Focused", 5:"Exceptional"}
+  },
+  heist: {
+    name: "Heist Operation",
+    key: "heist",
+    color: "#e84858",
+    emoji: "💰",
+    craving: {1:"Whisper", 2:"Nudge", 3:"Pull", 4:"Hunger", 5:"Burning"},
+    satisfaction: {1:"Hollow", 2:"Thin", 3:"Decent", 4:"Rich", 5:"Perfect"},
+    confidence: {1:"Shaky", 2:"Hesitant", 3:"Solid", 4:"Locked", 5:"Guaranteed"},
+    form_quality: {1:"Rushed", 2:"Loose", 3:"Clean", 4:"Tight", 5:"Masterful"},
+    surf: {1:"Dissipated", 2:"Cooling", 3:"Lingering", 4:"Growing", 5:"Maximum"},
+    neuro_summary: {1:"Drained", 2:"Weak", 3:"Steady", 4:"Primed", 5:"Locked In"}
+  },
+  adventure: {
+    name: "Adventure Quest",
+    key: "adventure",
+    color: "#45d080",
+    emoji: "🌿",
+    craving: {1:"Distant", 2:"Present", 3:"Calling", 4:"Demanding", 5:"Irresistible"},
+    satisfaction: {1:"Disappointing", 2:"Fleeting", 3:"Satisfying", 4:"Rewarding", 5:"Euphoric"},
+    confidence: {1:"Guessing", 2:"Uncertain", 3:"Confident", 4:"Certain", 5:"Unwavering"},
+    form_quality: {1:"Stumbling", 2:"Struggling", 3:"Competent", 4:"Skilled", 5:"Effortless"},
+    surf: {1:"Vanished", 2:"Receding", 3:"Present", 4:"Intensifying", 5:"Overwhelming"},
+    neuro_summary: {1:"Collapsed", 2:"Fatigued", 3:"Ready", 4:"Strong", 5:"Unstoppable"}
+  },
+  space: {
+    name: "Space Exploration",
+    key: "space",
+    color: "#a070e8",
+    emoji: "🚀",
+    craving: {1:"Signal Weak", 2:"Signal Low", 3:"Signal Medium", 4:"Signal Strong", 5:"Signal Critical"},
+    satisfaction: {1:"Void", 2:"Low Yield", 3:"Standard", 4:"High Yield", 5:"Maximum"},
+    confidence: {1:"Error Likely", 2:"Low Confidence", 3:"Medium Confidence", 4:"High Confidence", 5:"Verified"},
+    form_quality: {1:"Compromised", 2:"Below Standard", 3:"Standard", 4:"Optimal", 5:"Perfect Form"},
+    surf: {1:"Signal Lost", 2:"Signal Fading", 3:"Signal Holding", 4:"Signal Rising", 5:"Signal Peak"},
+    neuro_summary: {1:"Critical", 2:"Low Power", 3:"Standard", 4:"Optimal", 5:"Maximum"}
+  }
+};
+
+// Active theme (Military default)
+let activeTheme = localStorage.getItem("active-theme") || "military";
+
+// Get word for current theme + scale type + level
+function getThemeWord(scaleType, level) {
+  const theme = THEMES[activeTheme];
+  return theme[scaleType][level] || String(level);
+}
+
+// Get numeric level from word (reverse lookup)
+function getWordLevel(scaleType, word) {
+  const theme = THEMES[activeTheme];
+  const scale = theme[scaleType];
+  for (let level in scale) {
+    if (scale[level] === word) return parseInt(level);
+  }
+  return 3; // default to middle
+}
 
 let innerState={valence:null,intensity:5,task_filter:"standard"};
 let captureTime="now";
@@ -1628,11 +1751,29 @@ function showInterceptGate(data){
 }
 async function interceptChoice(choice){
   if(!interceptPending)return;let c=interceptPending.fullContent;
+  
+  // V12.0 — SC005: Extract context for tally update
+  const contextMatch = c.match(/context:\s*"?(.+?)"?\s*$/m);
+  const contextName = contextMatch ? contextMatch[1] : null;
+  
   const xp=choice==="power_choice"?15:0;const fields="binary_choice: "+choice+"\nxp_earned: "+xp;
   const parts=c.split("---");if(parts.length>=3){parts[1]=parts[1].trimEnd()+"\n"+fields+"\n";c=parts.join("---")}
   c+=choice==="power_choice"?"\n\n**Choice: ⚡ POWER** — Overrode the impulse. +15 XP.":"\n\n**Choice: 🧠 SELF** — Honored the need. No shame. Fresh start.";
   interceptPending.fullContent=c;
-  try{if(vault){await obsW("Capture/inbox/"+interceptPending.filename,c,true);toast("✅ Intercept saved","success")}}catch(e){toast("Vault write failed","error")}
+  
+  try{
+    if(vault){
+      await obsW("Capture/inbox/"+interceptPending.filename,c,true);
+      
+      // V12.0 — SC005: Update context tallies
+      if(contextName){
+        await updateContextFromIntercept(contextName, choice);
+      }
+      
+      toast("✅ Intercept saved","success");
+    }
+  }catch(e){toast("Vault write failed","error")}
+  
   interceptPending=null;document.getElementById("gateOverlay").style.display="none";
   onEntityCaptured("intercept");updInboxCount();toast(choice==="power_choice"?"⚡ POWER — +15 XP":"🧠 SELF — no shame","success");
 }
@@ -2190,14 +2331,394 @@ async function drawerHabit(){
   }catch(e){toast("Error: "+e.message,"error")}
 }
 
-function drawerIntercept(){
+// ═══════════════════════════════════════════════════════════════════════════
+// V12.0 — SC002: WORD SCALE COMPONENT
+// Renders 5-button word selector for intensity/satisfaction/confidence
+// ═══════════════════════════════════════════════════════════════════════════
+
+function renderWordScale(scaleType, selectedLevel, onSelect) {
+  const levels = [1, 2, 3, 4, 5];
+  return levels.map(level => {
+    const word = getThemeWord(scaleType, level);
+    const isActive = level === selectedLevel;
+    return `
+      <button 
+        class="word-scale-btn ${isActive ? 'active' : ''}" 
+        onclick="${onSelect}(${level})"
+        data-level="${level}">
+        ${word}
+      </button>
+    `;
+  }).join('');
+}
+
+// Current intercept data for creation flow
+let interceptData = {
+  item: "",
+  intensity_level: 3,
+  intensity_word: "",
+  trigger: "",
+  predicted_satisfaction_level: 3,
+  predicted_satisfaction_word: "",
+  context: null
+};
+
+function openInterceptCreation() {
   closeDrawer();
-  const item=prompt("🛡️ What's the craving/impulse?");if(!item)return;
-  const intensity=prompt("Intensity 1-10?")||"7";
-  const trigger=prompt("What triggered it?")||"";
-  const yaml="---\ntype: intercept\nlayer: marble\ncreated: "+NOW()+"\nupdated: "+TD+"\nsource: mobile_artifact\nspecific_item: \""+item.replace(/"/g,'\\"')+"\"\nintensity: "+intensity+"\ntrigger: \""+trigger.replace(/"/g,'\\"')+"\"\ntags:\n  - \"nelos/intercept\"\n  - \"v12\"\n---\n\n🛡️ Intercept: "+item+"\n";
-  const data={entityType:"intercept",filename:"intercept_"+TD+"_"+NS()+".md",fullContent:yaml};
+  
+  // Reset data
+  interceptData = {
+    item: "",
+    intensity_level: 3,
+    intensity_word: getThemeWord('craving', 3),
+    trigger: "",
+    predicted_satisfaction_level: 3,
+    predicted_satisfaction_word: getThemeWord('satisfaction', 3),
+    context: null
+  };
+  
+  const modal = document.getElementById("timerModal");
+  modal.innerHTML = `
+    <div class="timer-modal">
+      <div class="timer-card" style="max-width:360px">
+        <div style="font-size:40px;margin-bottom:8px">🛡️</div>
+        <div style="font-family:var(--mono);font-size:16px;font-weight:800;color:var(--amber);letter-spacing:2px;margin-bottom:16px">INTERCEPT</div>
+        
+        <div style="margin-bottom:16px">
+          <label style="font-size:11px;color:var(--dimmer);display:block;margin-bottom:6px">What's the craving/impulse?</label>
+          <input 
+            id="interceptItem" 
+            type="text" 
+            class="timer-input" 
+            placeholder="cannabis, social media, snack..." 
+            style="text-align:left"
+            oninput="interceptData.item = this.value"
+          />
+        </div>
+        
+        <div style="margin-bottom:16px">
+          <label style="font-size:11px;color:var(--dimmer);display:block;margin-bottom:8px">How intense is it?</label>
+          <div class="word-scale-grid">
+            ${renderWordScale('craving', 3, 'selectInterceptIntensity')}
+          </div>
+        </div>
+        
+        <div style="margin-bottom:20px">
+          <label style="font-size:11px;color:var(--dimmer);display:block;margin-bottom:6px">What triggered it?</label>
+          <input 
+            id="interceptTrigger" 
+            type="text" 
+            class="timer-input" 
+            placeholder="boredom, stress, habit..." 
+            style="text-align:left"
+            oninput="interceptData.trigger = this.value"
+          />
+        </div>
+        
+        <button class="btn btn-p" style="background:var(--amber);width:100%" onclick="saveInterceptToGate()">Continue to Gate →</button>
+        <button class="btn btn-s" style="margin-top:8px;width:100%" onclick="closeInterceptCreation()">Cancel</button>
+      </div>
+    </div>
+  `;
+  modal.style.display = "block";
+}
+
+function selectInterceptIntensity(level) {
+  interceptData.intensity_level = level;
+  interceptData.intensity_word = getThemeWord('craving', level);
+  
+  // Update UI
+  document.querySelectorAll('.word-scale-btn').forEach(btn => {
+    btn.classList.toggle('active', parseInt(btn.dataset.level) === level);
+  });
+}
+
+function closeInterceptCreation() {
+  document.getElementById("timerModal").innerHTML = "";
+  document.getElementById("timerModal").style.display = "none";
+}
+
+async function saveInterceptToGate() {
+  if (!interceptData.item.trim()) {
+    toast("⚠️ Enter what you're craving", "error");
+    return;
+  }
+  
+  // Get current context (if available from daily note or last capture)
+  let contextLink = "";
+  // TODO: SC004 will populate this from context selector
+  
+  const yaml = `---
+type: intercept
+layer: marble
+created: ${NOW()}
+updated: ${TD}
+source: mobile_artifact
+specific_item: "${interceptData.item.replace(/"/g, '\\"')}"
+intensity: ${interceptData.intensity_level}
+intensity_word: "${interceptData.intensity_word}"
+trigger: "${interceptData.trigger.replace(/"/g, '\\"')}"
+${contextLink ? `context: "${contextLink}"` : ''}
+tags:
+  - "nelos/intercept"
+  - "v12"
+---
+
+🛡️ Intercept: ${interceptData.item}
+Intensity: ${interceptData.intensity_word} (${interceptData.intensity_level}/5)
+Trigger: ${interceptData.trigger || "Unknown"}
+`;
+  
+  const data = {
+    entityType: "intercept",
+    filename: "intercept_" + TD + "_" + NS() + ".md",
+    fullContent: yaml
+  };
+  
+  closeInterceptCreation();
   showInterceptGate(data);
+}
+
+function drawerIntercept(){
+  openInterceptCreation();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// V12.0 — SC004: CONTEXT NAMING FORMULA
+// TIME · LOCATION · STATE template with duplicate detection
+// ═══════════════════════════════════════════════════════════════════════════
+
+let contextCreateData = {
+  time: "",
+  location: "",
+  location_name: "",
+  state_preset: "",
+  state_emoji: "",
+  state_name: ""
+};
+
+const CONTEXT_TIME_OPTIONS = [
+  "Early Morning", "Morning", "Midday", "Afternoon", "Evening", "Night",
+  "Deep Work", "Meeting", "Creative", "Learning", "Social", "Exercise", "Admin", "Planning", "Recovery"
+];
+
+function openContextCreation() {
+  closeDrawer();
+  
+  contextCreateData = {
+    time: "Evening",
+    location: "",
+    location_name: "",
+    state_preset: "",
+    state_emoji: "",
+    state_name: ""
+  };
+  
+  const modal = document.getElementById("timerModal");
+  modal.innerHTML = `
+    <div class="timer-modal">
+      <div class="timer-card" style="max-width:360px">
+        <div style="font-size:40px;margin-bottom:8px">📍</div>
+        <div style="font-family:var(--mono);font-size:16px;font-weight:800;color:var(--amber);letter-spacing:2px;margin-bottom:16px">CREATE CONTEXT</div>
+        
+        <div style="margin-bottom:12px">
+          <label class="context-label">TIME / ACTIVITY</label>
+          <select 
+            id="contextTime" 
+            class="timer-input"
+            onchange="contextCreateData.time = this.value; updateContextPreview()">
+            ${CONTEXT_TIME_OPTIONS.map(opt => `<option value="${opt}"${opt === "Evening" ? " selected" : ""}>${opt}</option>`).join('')}
+          </select>
+        </div>
+        
+        <div style="margin-bottom:12px">
+          <label class="context-label">LOCATION</label>
+          <input 
+            id="contextLocation" 
+            type="text" 
+            class="timer-input" 
+            placeholder="Cihangir Flat, Coffee Lab..." 
+            style="text-align:left"
+            oninput="contextCreateData.location_name = this.value; updateContextPreview()"
+          />
+          <div style="font-size:10px;color:var(--dimmer);margin-top:4px">Tip: Use [[Place - Name]] for linking</div>
+        </div>
+        
+        <div style="margin-bottom:16px">
+          <label class="context-label">STATE (optional)</label>
+          <button class="btn btn-s" style="width:100%" onclick="openStateForContext()">🧠 Use State Capture</button>
+          <div id="contextStatePreview" style="font-size:12px;color:var(--dim);margin-top:6px;text-align:center"></div>
+        </div>
+        
+        <div class="context-preview" id="contextPreviewName">
+          Evening · [location] · [state]
+        </div>
+        
+        <div id="contextDuplicateWarning" style="display:none"></div>
+        
+        <button class="btn btn-p" style="background:var(--amber);width:100%" onclick="saveContextEntity()">Create Context</button>
+        <button class="btn btn-s" style="margin-top:8px;width:100%" onclick="closeContextCreation()">Cancel</button>
+      </div>
+    </div>
+  `;
+  modal.style.display = "block";
+  updateContextPreview();
+}
+
+function updateContextPreview() {
+  const time = contextCreateData.time || "[time]";
+  const location = contextCreateData.location_name || "[location]";
+  const state = contextCreateData.state_name || "[state]";
+  
+  const preview = `${time} · ${location}${state ? ' · ' + state : ''}`;
+  
+  const el = document.getElementById("contextPreviewName");
+  if (el) el.textContent = preview;
+}
+
+function openStateForContext() {
+  // Save current modal state
+  const currentModal = document.getElementById("timerModal").innerHTML;
+  
+  // Open state capture with callback
+  openStateCapture("context", function(result) {
+    // Restore context creation modal
+    document.getElementById("timerModal").innerHTML = currentModal;
+    document.getElementById("timerModal").style.display = "block";
+    
+    // Update context data with state
+    contextCreateData.state_preset = result.preset;
+    contextCreateData.state_emoji = result.preset_emoji;
+    contextCreateData.state_name = result.preset_name;
+    
+    // Update state preview
+    const statePreview = document.getElementById("contextStatePreview");
+    if (statePreview) {
+      statePreview.textContent = `${result.preset_emoji} ${result.preset_name}`;
+    }
+    
+    updateContextPreview();
+  });
+}
+
+async function saveContextEntity() {
+  if (!contextCreateData.location_name.trim()) {
+    toast("⚠️ Enter a location", "error");
+    return;
+  }
+  
+  const time = contextCreateData.time;
+  const loc = contextCreateData.location_name;
+  const state = contextCreateData.state_name;
+  const emoji = contextCreateData.state_emoji;
+  
+  const name = `${time} · ${loc}${state ? ' · ' + emoji + ' ' + state : ''}`;
+  const slug = sl(name);
+  
+  const yaml = `---
+type: context
+layer: sand
+status: active
+created: ${NOW()}
+updated: ${NOW()}
+uuid: ${TD.replace(/-/g,"")}${NS()}
+name: "${name.replace(/"/g, '\\"')}"
+time_component: "${time}"
+location: "${loc.replace(/"/g, '\\"')}"
+${contextCreateData.state_preset ? `state_preset: "${contextCreateData.state_preset}"` : ''}
+${contextCreateData.state_emoji ? `state_preset_emoji: "${contextCreateData.state_emoji}"` : ''}
+activation_count: 0
+intercepts_total: 0
+intercepts_power: 0
+intercepts_self: 0
+intercept_win_rate: 0
+vulnerability_score: 0
+high_risk_context: false
+tags:
+  - "nelos/context"
+  - "v12"
+---
+
+# ${name}
+
+Created: ${TD}
+`;
+  
+  try {
+    await obsW(`Contexts/${slug}.md`, yaml, true);
+    toast("✅ Context created", "success");
+    closeContextCreation();
+  } catch (e) {
+    toast("❌ Save failed: " + e.message, "error");
+  }
+}
+
+function closeContextCreation() {
+  document.getElementById("timerModal").innerHTML = "";
+  document.getElementById("timerModal").style.display = "none";
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// V12.0 — SC005: CONTEXT-INTERCEPT INTELLIGENCE
+// Auto-update context tallies when intercept is saved
+// ═══════════════════════════════════════════════════════════════════════════
+
+async function updateContextFromIntercept(contextName, binaryChoice) {
+  if (!contextName || !vault) return;
+  
+  try {
+    // Find context file
+    const slug = sl(contextName);
+    const contextPath = `Contexts/${slug}.md`;
+    
+    const content = await obsR(contextPath).catch(() => null);
+    if (!content) {
+      console.log(`[SC005] Context not found: ${contextPath}`);
+      return;
+    }
+    
+    // Parse current tallies
+    const yaml = parseYaml(content);
+    const totalMatch = content.match(/intercepts_total:\s*(\d+)/);
+    const powerMatch = content.match(/intercepts_power:\s*(\d+)/);
+    const selfMatch = content.match(/intercepts_self:\s*(\d+)/);
+    
+    let total = totalMatch ? parseInt(totalMatch[1]) : 0;
+    let power = powerMatch ? parseInt(powerMatch[1]) : 0;
+    let self = selfMatch ? parseInt(selfMatch[1]) : 0;
+    
+    // Update tallies
+    total += 1;
+    if (binaryChoice === "power_choice") {
+      power += 1;
+    } else {
+      self += 1;
+    }
+    
+    // Calculate metrics
+    const winRate = total > 0 ? Math.round((power / total) * 100) : 0;
+    const activations = yaml.activation_count || 1;
+    const freq = total / activations;
+    const lossRate = total > 0 ? (power / total) : 0;
+    const vulnScore = Math.max(1, Math.min(10, Math.round(freq * lossRate * 10)));
+    const highRisk = vulnScore > 7;
+    
+    // Update YAML fields
+    let updated = content;
+    updated = updateYamlField(updated, "intercepts_total", String(total));
+    updated = updateYamlField(updated, "intercepts_power", String(power));
+    updated = updateYamlField(updated, "intercepts_self", String(self));
+    updated = updateYamlField(updated, "intercept_win_rate", String(winRate));
+    updated = updateYamlField(updated, "vulnerability_score", String(vulnScore));
+    updated = updateYamlField(updated, "high_risk_context", String(highRisk));
+    updated = updateYamlField(updated, "updated", `"${NOW()}"`);
+    
+    await obsW(contextPath, updated);
+    console.log(`[SC005] Context updated: ${contextName} → ${total} intercepts (${winRate}% win rate, ${vulnScore}/10 vulnerability)`);
+    
+  } catch (e) {
+    console.error(`[SC005] Context update failed:`, e);
+  }
 }
 
 function drawerNeuro(){closeDrawer();openStateCapture("standalone",null)}
@@ -2251,6 +2772,7 @@ async function boot(){
     await ensureFolder("Capture/captures");
     await ensureFolder("Capture/intercepts");
     await ensureFolder("Journals/entries");
+    await ensureFolder("Contexts"); // V12.0 — SC004
   }
   loadSatState();
   await renderSatBanner();
@@ -2261,6 +2783,9 @@ async function boot(){
   if(db)bufferCleanExpired();
   if(db&&vault)setTimeout(()=>retryPendingCaptures(),3000);
   if("Notification" in window&&Notification.permission==="default")setTimeout(()=>Notification.requestPermission(),5000);
+  
+  // V12.0 — Log active theme
+  console.log(`[ATLAS ${ATLAS_VERSION}] Active theme: ${THEMES[activeTheme].name} (${activeTheme})`);
 }
 boot();
 </script>
