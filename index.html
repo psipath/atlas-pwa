@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-title" content="ATLAS">
 <meta name="theme-color" content="#0a0a0f">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<title>ATLAS — V12.0 Light</title>
+<title>ATLAS — V12.0.1 Light</title>
 <style>
 :root{--bg:#08080c;--bg2:#111118;--bg3:#1a1a24;--border:#2a2a3a;--text:#f0f0f5;--dim:#8888a0;--dimmer:#4a4a5a;--amber:#f5b040;--amber2:#e09820;--amber-bg:rgba(245,176,64,0.12);--green:#45d080;--green-bg:rgba(69,208,128,0.12);--red:#e84858;--red-bg:rgba(232,72,88,0.12);--blue:#5090e8;--blue-bg:rgba(80,144,232,0.12);--mono:'SF Mono','Fira Code','JetBrains Mono',monospace;--sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -263,6 +263,13 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);height:100dv
 .context-preview{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:12px;font-size:14px;color:var(--text);text-align:center;margin:12px 0;font-weight:600}
 .context-warning{background:var(--amber-bg);border:1px solid rgba(245,176,64,0.3);border-radius:10px;padding:10px;margin:12px 0;font-size:12px;color:var(--amber)}
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   V12.0.1 — INBOX LIST FILTER BUTTONS
+   ═══════════════════════════════════════════════════════════════════════════ */
+.filter-btn{padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);color:var(--dim);font-size:11px;font-family:var(--mono);font-weight:700;cursor:pointer;transition:all .12s;-webkit-tap-highlight-color:transparent}
+.filter-btn:active{transform:scale(0.95)}
+.filter-btn.active{border-color:var(--amber);background:var(--amber-bg);color:var(--amber)}
+
 </style>
 </head>
 <body>
@@ -349,21 +356,24 @@ body{font-family:var(--sans);background:var(--bg);color:var(--text);height:100dv
 
 <script>
 // ═══════════════════════════════════════════════════════════════════════════
-// ATLAS V12.0 — DATA QUALITY LAYER
+// ATLAS V12.0.1 — INBOX NAVIGATION IMPROVEMENTS
 // 
 // Built: 2026-02-14
-// Components:
+// Changes from v12.0:
+//   ✅ Inbox opens to list view (not card)
+//   ✅ List filters: All, High Priority, Today
+//   ✅ Improved list item format (priority emoji, TIT count, date)
+//   ✅ TIT screen: Icons on right (← List, ✕ Close)
+//   ✅ Back to list button returns to filtered list
+//
+// V12.0 Components (still active):
 //   ✅ SC003: Theme Vocabulary System (5 themes, Military default)
 //   ✅ SC002: 5-Word Intensity Scales (word buttons replace sliders)
 //   ✅ SC004: Context Naming Template (TIME · LOCATION · STATE)
 //   ✅ SC005: Context-Intercept Tallies (auto-update on save)
-//
-// Deferred to V12.1:
-//   ⏸️ Atlas Questions (SAT generation + AI prompting)
-//   ⏸️ NOT NOW Screen (planning interface)
 // ═══════════════════════════════════════════════════════════════════════════
 
-const ATLAS_VERSION = "12.0";
+const ATLAS_VERSION = "12.0.1";
 
 const TD=new Date().toISOString().split("T")[0];
 const NOW=()=>new Date().toISOString();
@@ -572,7 +582,7 @@ async function bufferCleanExpired(){
 }
 
 // ─── LIMITLESS API ───
-const LMT_BASE="https://atlas-proxy.psipath.workers.dev/v1";
+const LMT_BASE="https://api.limitless.ai/v1";
 async function lmtFetch(path,params={}){
   const url=new URL(LMT_BASE+path);
   Object.entries(params).forEach(([k,v])=>{if(v!==undefined&&v!==null)url.searchParams.set(k,v)});
@@ -1819,7 +1829,9 @@ async function showInbox(){
   o.style.display="flex";await loadInboxItems();
   const po={critical:0,high:1,standard:2,low:3};
   inboxItems.sort((a,b)=>{const ap=po[(a.yaml.priority||"standard").toLowerCase()]??2;const bp=po[(b.yaml.priority||"standard").toLowerCase()]??2;if(ap!==bp)return ap-bp;return(a.yaml.created||"").localeCompare(b.yaml.created||"")});
-  inboxIdx=0;inboxUndoStack=[];renderInboxCard();
+  inboxIdx=0;inboxUndoStack=[];
+  // v12.1 - Open to list view by default
+  renderInboxList();
 }
 
 function renderInboxCard(){
@@ -1867,17 +1879,48 @@ async function cardAction(action){
 
 function inboxUndo(){if(!inboxUndoStack.length)return;const u=inboxUndoStack.pop();u.item._done=false;inboxIdx=u.idx;toast("↩ Undone","success");renderInboxCard()}
 
+// v12.0.1 - List filter state
+let inboxListFilter = "all"; // all, high, today
+
 function renderInboxList(){
-  const o=document.getElementById("inboxOverlay");const live=inboxItems.filter(i=>!i._done);
-  if(!live.length){renderInboxCard();return}
+  const o=document.getElementById("inboxOverlay");
+  let live=inboxItems.filter(i=>!i._done);
+  
+  // Apply filters
+  if(inboxListFilter === "high"){
+    live = live.filter(i => {
+      const pri = (i.yaml.priority || "").toLowerCase();
+      return pri === "critical" || pri === "high";
+    });
+  } else if(inboxListFilter === "today"){
+    live = live.filter(i => (i.yaml.created || "").startsWith(TD));
+  }
+  
+  if(!live.length){
+    o.innerHTML='<div class="overlay-header"><span class="overlay-title">📥 INBOX</span><div style="display:flex;gap:8px"><button class="overlay-close" onclick="hideOverlay(\'inbox\')">✕</button></div></div><div class="overlay-body"><div class="empty"><div style="font-size:48px;opacity:.4">📭</div><div style="margin-top:16px;font-size:14px">No items match filter</div><button class="btn btn-s" style="margin-top:20px;width:100%" onclick="inboxListFilter=\'all\';renderInboxList()">Show All</button></div></div>';
+    return;
+  }
+  
+  const allCount = inboxItems.filter(i=>!i._done).length;
   const processed=inboxItems.filter(i=>i._done).length,pct=inboxItems.length?Math.round((processed/inboxItems.length)*100):0;
-  let rh=live.map(item=>{const idx=inboxItems.indexOf(item),e=ENTITIES[item.entityType],y=item.yaml;
+  
+  // Improved list item format
+  let rh=live.map(item=>{
+    const idx=inboxItems.indexOf(item),e=ENTITIES[item.entityType],y=item.yaml;
     const name=y.name||y.item_name||y.specific_item||y.journal_type||item.filename;
-    const titSummary=item.tits?.what?esc(item.tits.what).slice(0,60):"";
-    const seedInfo=item.seed&&SEED_TYPES[item.seed]?SEED_TYPES[item.seed]:null;
-    const intentLabel=seedInfo?seedInfo.emoji+" "+seedInfo.name:(item.intent?INTENT_LABELS[item.intent]||item.intent:"");
-    return '<div class="inbox-row" id="inboxRow'+idx+'"><div class="inbox-row-inner"><div class="inbox-row-swipe-bg inbox-row-bg-approve">✅</div><div class="inbox-row-swipe-bg inbox-row-bg-delete">🗑️</div><div class="inbox-row-content" id="inboxRowC'+idx+'"><span style="font-size:20px;flex-shrink:0">'+(e?.e||"📄")+'</span><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(name)+'</div><div style="font-size:10px;color:var(--dim);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+(intentLabel?intentLabel+" · ":"")+(titSummary||esc(e?.l||item.entityType))+'</div></div><span style="font-size:10px;color:var(--dimmer);flex-shrink:0">→</span></div></div></div>'}).join("");
-  o.innerHTML='<div class="overlay-header"><span class="overlay-title">📥 INBOX ('+live.length+')</span><div style="display:flex;gap:8px;align-items:center">'+(inboxUndoStack.length?'<button class="overlay-close" onclick="inboxUndo()">↩</button>':"")+'<button class="overlay-close" onclick="renderInboxCard()">▤</button><button class="overlay-close" onclick="hideOverlay(\'inbox\')">✕</button></div></div><div class="overlay-body" style="padding:8px 12px"><div class="inbox-progress"><div class="inbox-bar"><div class="inbox-bar-fill" style="width:'+pct+'%"></div></div><span class="inbox-stats">'+processed+'/'+inboxItems.length+'</span></div><div style="font-size:10px;color:var(--dimmer);margin-bottom:8px;text-align:center">swipe → confirm · tap to edit · swipe ← delete</div>'+rh+'</div>';
+    const pri=(y.priority||"standard").toLowerCase();
+    const priEmoji = pri==="critical"?"🔴":pri==="high"?"🟠":"";
+    const titCount = item.tits ? Object.keys(item.tits).filter(k=>item.tits[k]).length : 0;
+    const titBadge = titCount > 0 ? '<span style="background:var(--amber-bg);color:var(--amber);padding:2px 6px;border-radius:6px;font-size:10px;font-family:var(--mono);font-weight:700">'+titCount+' TIT</span>' : "";
+    const created = y.created ? new Date(y.created).toLocaleDateString([],{month:"short",day:"numeric"}) : "";
+    
+    return '<div class="inbox-row" id="inboxRow'+idx+'"><div class="inbox-row-inner"><div class="inbox-row-swipe-bg inbox-row-bg-approve">✅</div><div class="inbox-row-swipe-bg inbox-row-bg-delete">🗑️</div><div class="inbox-row-content" id="inboxRowC'+idx+'"><span style="font-size:24px;flex-shrink:0">'+(e?.e||"📄")+'</span><div style="flex:1;min-width:0;padding:0 8px"><div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">'+(priEmoji?'<span style="font-size:12px">'+priEmoji+'</span>':"")+'<span style="font-size:13px;font-weight:700;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+esc(name)+'</span></div><div style="display:flex;align-items:center;gap:6px;font-size:10px;color:var(--dim)"><span style="font-family:var(--mono);text-transform:uppercase;font-weight:700">'+(e?.l||item.entityType)+'</span>'+(created?'<span>· '+created+'</span>':"")+titBadge+'</div></div><span style="font-size:14px;color:var(--dimmer);flex-shrink:0">→</span></div></div></div>';
+  }).join("");
+  
+  // Filter buttons
+  const filterHtml = '<div style="display:flex;gap:6px;margin-bottom:8px;justify-content:center"><button class="filter-btn '+(inboxListFilter==='all'?'active':'')+'" onclick="inboxListFilter=\'all\';renderInboxList()">All ('+allCount+')</button><button class="filter-btn '+(inboxListFilter==='high'?'active':'')+'" onclick="inboxListFilter=\'high\';renderInboxList()">High Pri</button><button class="filter-btn '+(inboxListFilter==='today'?'active':'')+'" onclick="inboxListFilter=\'today\';renderInboxList()">Today</button></div>';
+  
+  o.innerHTML='<div class="overlay-header"><span class="overlay-title">📥 INBOX ('+live.length+')</span><div style="display:flex;gap:8px;align-items:center">'+(inboxUndoStack.length?'<button class="overlay-close" onclick="inboxUndo()">↩</button>':"")+'<button class="overlay-close" onclick="renderInboxCard()">▤</button><button class="overlay-close" onclick="hideOverlay(\'inbox\')">✕</button></div></div><div class="overlay-body" style="padding:8px 12px"><div class="inbox-progress"><div class="inbox-bar"><div class="inbox-bar-fill" style="width:'+pct+'%"></div></div><span class="inbox-stats">'+processed+'/'+inboxItems.length+'</span></div>'+filterHtml+'<div style="font-size:10px;color:var(--dimmer);margin-bottom:8px;text-align:center">swipe → confirm · tap to edit · swipe ← delete</div>'+rh+'</div>';
   setTimeout(()=>{live.forEach(item=>attachRowSwipe(inboxItems.indexOf(item)))},50);
 }
 
@@ -1918,7 +1961,7 @@ function renderInboxDetail(idx){
   const neuroBarHtml='<div class="neuro-bar" id="reviewNeuroBar" onclick="openInboxStateCapture('+idx+')"><div class="neuro-bar-header"><span class="neuro-bar-title">🧠 STATE CAPTURE</span><span class="neuro-bar-toggle">tap to tag</span></div><div class="neuro-bar-preview" id="neuroBarPreview">'+neuroPreview+'</div></div>';
   const proposal=getAIProposal(item);
   const proposalHtml=proposal?'<div class="ai-proposal" id="aiProposalCard"><div class="ai-proposal-header"><span class="ai-proposal-title">🤖 ATLAS PROPOSAL</span><button class="ai-proposal-edit" onclick="toggleProposalEdit('+idx+')">✏️ edit</button></div><div class="ai-proposal-body" id="aiProposalBody">'+proposal.split("\n").map(l=>l.trim()).filter(l=>l).map(l=>'<div class="step"><span class="step-arrow">→</span><span>'+esc(l.replace(/^→\s*/,""))+'</span></div>').join("")+'</div></div>':"";
-  o.innerHTML='<div class="overlay-header"><div style="display:flex;align-items:center;gap:8px"><button class="overlay-close" onclick="renderInboxCard()">←</button><span class="overlay-title">'+(e?.e||"📄")+" "+esc(e?.l||item.entityType)+'</span></div><button class="overlay-close" onclick="hideOverlay(\'inbox\')">✕</button></div><div class="overlay-body" style="padding:12px">'+(confPct?'<div style="font-size:11px;color:var(--dimmer);font-family:var(--mono);margin-bottom:10px">AI confidence: <span style="color:'+confColor+';font-weight:800">'+confPct+'%</span> '+(item.reasoning?esc(item.reasoning):"")+'</div>':"")+'<div style="font-size:11px;color:var(--amber);font-family:var(--mono);letter-spacing:1px;margin-bottom:8px;font-weight:700">WORKFLOW SEED</div>'+seedHtml+'<div class="section-divider"></div>'+proposalHtml+'<div style="font-size:11px;color:var(--amber);font-family:var(--mono);letter-spacing:1px;margin-bottom:8px;font-weight:700">TIT BREAKDOWN</div><div id="titReviewFields">'+titHtml+'</div><div class="section-divider"></div>'+neuroBarHtml+'<div style="font-size:11px;color:var(--dimmer);font-family:var(--mono);margin:8px 0;padding:8px 12px;background:var(--bg2);border-radius:8px">→ '+item.dest+'/'+item.filename+'</div><div style="display:flex;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)"><button onclick="detailAction('+idx+',\'approve\')" style="flex:2;padding:18px;border-radius:14px;border:none;background:var(--green);color:#fff;font-family:var(--mono);font-size:16px;font-weight:800;cursor:pointer;min-height:56px">✅ Confirm</button><button onclick="detailAction('+idx+',\'delete\')" style="flex:1;padding:18px;border-radius:14px;border:1px solid var(--border);background:var(--bg3);color:var(--red);font-family:var(--mono);font-size:14px;font-weight:700;cursor:pointer;min-height:56px">🗑️</button></div></div>';
+  o.innerHTML='<div class="overlay-header"><span class="overlay-title">'+(e?.e||"📄")+" "+esc(e?.l||item.entityType)+'</span><div style="display:flex;gap:8px;align-items:center"><button class="overlay-close" onclick="renderInboxList()">← List</button><button class="overlay-close" onclick="hideOverlay(\'inbox\')">✕</button></div></div><div class="overlay-body" style="padding:12px">'+(confPct?'<div style="font-size:11px;color:var(--dimmer);font-family:var(--mono);margin-bottom:10px">AI confidence: <span style="color:'+confColor+';font-weight:800">'+confPct+'%</span> '+(item.reasoning?esc(item.reasoning):"")+'</div>':"")+'<div style="font-size:11px;color:var(--amber);font-family:var(--mono);letter-spacing:1px;margin-bottom:8px;font-weight:700">WORKFLOW SEED</div>'+seedHtml+'<div class="section-divider"></div>'+proposalHtml+'<div style="font-size:11px;color:var(--amber);font-family:var(--mono);letter-spacing:1px;margin-bottom:8px;font-weight:700">TIT BREAKDOWN</div><div id="titReviewFields">'+titHtml+'</div><div class="section-divider"></div>'+neuroBarHtml+'<div style="font-size:11px;color:var(--dimmer);font-family:var(--mono);margin:8px 0;padding:8px 12px;background:var(--bg2);border-radius:8px">→ '+item.dest+'/'+item.filename+'</div><div style="display:flex;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)"><button onclick="detailAction('+idx+',\'approve\')" style="flex:2;padding:18px;border-radius:14px;border:none;background:var(--green);color:#fff;font-family:var(--mono);font-size:16px;font-weight:800;cursor:pointer;min-height:56px">✅ Confirm</button><button onclick="detailAction('+idx+',\'delete\')" style="flex:1;padding:18px;border-radius:14px;border:1px solid var(--border);background:var(--bg3);color:var(--red);font-family:var(--mono);font-size:14px;font-weight:700;cursor:pointer;min-height:56px">🗑️</button></div></div>';
 }
 
 function openInboxStateCapture(idx){
@@ -2219,7 +2262,7 @@ function showSettings(){
   +'<div class="sgroup"><div class="slabel">SYNC &amp; DATA</div><div style="font-size:11px;margin-bottom:4px">Vault sync: <span style="color:'+syncColor+';font-weight:700">'+syncText+'</span></div><div style="font-size:11px;color:var(--dim);margin-bottom:8px" id="bufStatsLine">Buffer: loading...</div><div style="display:flex;gap:8px"><button class="btn btn-s" style="flex:1;background:var(--amber-bg);border-color:var(--amber);color:var(--amber)" onclick="exportBuffer()">📦 Export</button><button class="btn btn-s" style="flex:1" onclick="bufferCleanExpired().then(n=>toast(n+\' expired removed\',\'success\'))">🧹 Clean</button></div></div>'
   +'<div class="sgroup"><div class="slabel">NOTIFICATIONS</div><button class="btn btn-s" style="width:100%" onclick="reqNotif()">Enable Notifications</button></div>'
   +'<div class="sgroup"><div class="slabel">AI LEARNING ('+corrections.length+' corrections)</div><div style="font-size:11px;color:var(--dim);margin-bottom:8px">ATLAS learns from your inbox edits to improve future routing.</div>'+(corrections.length?'<div style="max-height:120px;overflow-y:auto;background:var(--bg2);border-radius:8px;padding:8px;margin-bottom:8px">'+corrections.slice(0,10).map(c=>'<div style="font-size:10px;color:var(--dimmer);margin-bottom:4px">'+esc(c.field)+': "'+esc(c.from)+'" → "'+esc(c.to)+'"</div>').join("")+'</div>':"")+'<button class="btn btn-s" style="width:100%" onclick="if(confirm(\'Clear all corrections?\')){localStorage.removeItem(\'atlas-corrections\');showSettings()}">Clear Learning Data</button></div>'
-  +'<div class="sgroup"><div class="slabel">SYSTEM</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">ATLAS V12 Light · v11.9</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">Build: '+TD+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">GitHub Vault: '+(ghOk?"✅ Connected":"❌ Not connected")+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">Local Obsidian: '+(vault&&!ghOk?"✅ Connected":"⚪ Optional")+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">IndexedDB: '+(db?"✅ Ready":"❌ Not init")+'</div><div style="font-size:11px;color:var(--dimmer)">Limitless: '+(lmtKey?"✅ Key set":"❌ No key")+'</div></div></div>';
+  +'<div class="sgroup"><div class="slabel">SYSTEM</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">ATLAS V12 Light · v11.8</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">Build: '+TD+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">GitHub Vault: '+(ghOk?"✅ Connected":"❌ Not connected")+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">Local Obsidian: '+(vault&&!ghOk?"✅ Connected":"⚪ Optional")+'</div><div style="font-size:11px;color:var(--dimmer);margin-bottom:4px">IndexedDB: '+(db?"✅ Ready":"❌ Not init")+'</div><div style="font-size:11px;color:var(--dimmer)">Limitless: '+(lmtKey?"✅ Key set":"❌ No key")+'</div></div></div>';
   o.style.display="flex";
   showBufferStats();
 }
